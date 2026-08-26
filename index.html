@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reagensia — Monitoring Reagen Laboratorium</title>
+<meta name="description" content="Dashboard monitoring stok reagen laboratorium: risiko kedaluwarsa, stok rendah, kelengkapan COA/MSDS, dan audit konsistensi data.">
+<meta name="theme-color" content="#f9f9f7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><text x='16' y='23' font-family='system-ui,sans-serif' font-size='19' font-weight='700' fill='white' text-anchor='middle'>R</text></svg>">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/print.css">
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <span class="brand-dot" aria-hidden="true">R</span>
+        <div>
+          <h1>Reagensia</h1>
+          <p>Monitoring Reagen Laboratorium</p>
+        </div>
+      </div>
+    </div>
+
+    <nav id="nav" aria-label="Navigasi utama"></nav>
+
+    <div class="sidebar-foot">
+      <button id="sync" class="sync" type="button" data-state="loading">
+        <span class="sync-dot" aria-hidden="true"></span>
+        <span id="sync-label">Menghubungkan…</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button id="nav-toggle" class="btn btn--ghost sidebar-toggle" type="button" aria-label="Buka menu">☰</button>
+      <div class="topbar-title">
+        <h2 id="page-title">Dashboard</h2>
+        <p id="page-subtitle"></p>
+      </div>
+      <div id="topbar-actions" class="topbar-actions no-print"></div>
+    </header>
+
+    <div id="view">
+      <div class="page">
+        <div class="boot">
+          <div class="spinner"></div>
+          <h2>Memuat…</h2>
+        </div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<noscript>
+  <div style="padding:24px;font:14px system-ui,sans-serif">
+    Dashboard ini membutuhkan JavaScript untuk membaca Google Sheets.
+    Data mentahnya tetap bisa dilihat langsung di spreadsheet.
+  </div>
+</noscript>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
