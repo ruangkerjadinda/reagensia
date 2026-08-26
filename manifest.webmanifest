@@ -1,0 +1,19 @@
+{
+  "name": "Reagensia — Monitoring Reagen Laboratorium",
+  "short_name": "Reagensia",
+  "description": "Pemantauan stok reagen laboratorium: risiko kedaluwarsa, stok rendah, kelengkapan dokumen, dan audit data.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f9f9f7",
+  "theme_color": "#2a78d6",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

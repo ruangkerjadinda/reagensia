@@ -1,0 +1,46 @@
+/*
+ * Cetak. Dipakai untuk berkas fisik: usulan pemusnahan, daftar alert per PIC,
+ * dan kartu stok — semuanya dokumen yang biasa diminta saat penilaian.
+ */
+
+@media print {
+  @page { margin: 14mm; size: A4; }
+
+  :root {
+    --plane: #fff; --surface: #fff; --surface-raised: #fff; --surface-sunken: #fff;
+    --ink: #000; --ink-secondary: #333; --ink-muted: #555;
+    --border: #bbb; --border-strong: #888; --grid: #ddd; --axis: #888;
+  }
+
+  body { background: #fff; color: #000; font-size: 10.5pt; }
+
+  .sidebar, .topbar, .toolbar, .toasts, .palette, .palette-scrim,
+  .scrim, .drawer, .no-print, .btn, .seg, .switch { display: none !important; }
+
+  .main { margin-left: 0; }
+  .page { padding: 0; gap: 12pt; }
+  .card { border: 1px solid #bbb; break-inside: avoid; padding: 8pt; }
+
+  .print-only { display: block !important; }
+  .print-head { margin-bottom: 10pt; border-bottom: 1.5pt solid #000; padding-bottom: 6pt; }
+  .print-head h1 { font-size: 14pt; }
+  .print-head .meta { font-size: 9pt; color: #444; margin-top: 3pt; }
+
+  table.data { font-size: 9pt; }
+  table.data th, table.data td { padding: 3pt 5pt; border-bottom: 0.5pt solid #ccc; }
+  table.data thead th { background: #eee !important; color: #000; border-bottom: 1pt solid #000; }
+  .table-wrap { max-height: none; overflow: visible; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+
+  .chip { border: 0.5pt solid #999; background: none !important; color: #000 !important; }
+
+  /* Tanda tangan di kaki dokumen resmi. */
+  .print-sign { margin-top: 24pt; display: flex; gap: 40pt; break-inside: avoid; }
+  .print-sign div { flex: 1; font-size: 9pt; }
+  .print-sign .rule { margin-top: 42pt; border-top: 0.5pt solid #000; padding-top: 3pt; }
+
+  a[href]::after { content: ''; }
+}
+
+.print-only { display: none; }

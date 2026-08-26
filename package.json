@@ -1,0 +1,13 @@
+{
+  "name": "reagensia-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dashboard monitoring reagen laboratorium — situs statis, membaca Google Sheets langsung.",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs 8080",
+    "verify": "node tools/verify-data.mjs",
+    "snapshot": "node tools/build-snapshot.mjs",
+    "mock": "node tools/mock-endpoint.mjs"
+  }
+}
