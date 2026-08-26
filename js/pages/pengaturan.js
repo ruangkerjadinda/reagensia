@@ -8,7 +8,7 @@ import { applyTheme } from '../ui/theme.js';
 export const meta = {
   title: 'Pengaturan',
   subtitle: 'Sumber data, mode input, ambang risiko, tampilan',
-  icon: '⚙',
+  icon: 'pengaturan',
 };
 
 export function render({ data, summary, rerender }) {
@@ -33,7 +33,7 @@ export function render({ data, summary, rerender }) {
     store.warnings.length
       ? el('div', { style: { marginTop: '12px' } }, notice({
         tone: 'warn',
-        glyph: '▲',
+        icon: 'alert',
         title: 'Peringatan pemetaan kolom',
         body: [...new Set(store.warnings)].join(' '),
       }))
@@ -156,7 +156,7 @@ function writeCard(rerender) {
 
     notice({
       tone: 'info',
-      glyph: 'ℹ',
+      icon: 'info',
       title: 'Token ini tidak sekuat kata sandi',
       body: 'Token disimpan di peramban dan ikut terkirim dari halaman, jadi siapa pun yang membuka devtools di komputer ini bisa membacanya. Fungsinya menahan penulisan iseng dari luar, bukan menggantikan pengamanan akses spreadsheet. Jangan pakai kembali kata sandi apa pun sebagai token.',
     }),

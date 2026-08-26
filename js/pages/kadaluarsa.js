@@ -11,7 +11,7 @@ import { toast } from '../ui/overlay.js';
 export const meta = {
   title: 'Kedaluwarsa',
   subtitle: 'Kapan setiap lot habis masa pakainya',
-  icon: '⏳',
+  icon: 'kadaluarsa',
 };
 
 export function render({ data, summary }) {
@@ -27,7 +27,7 @@ export function render({ data, summary }) {
     lots: data.lots,
     fields: ['instalasi', 'kategori', 'risiko'],
     extra: params.bulan
-      ? [btn(`Bulan ${params.bulan} ✕`, { variant: 'ghost', onclick: () => setParams({ bulan: '' }) })]
+      ? [btn(`Bulan ${params.bulan}`, { icon: 'tutup', variant: 'ghost', title: 'Hapus penyaringan bulan', onclick: () => setParams({ bulan: '' }) })]
       : [],
   }));
 
@@ -64,8 +64,8 @@ export function render({ data, summary }) {
     const totalQty = expired.reduce((a, l) => a + l.sisaStok, 0);
     page.append(el('section.page-section', {},
       sectionHead('Usulan pemusnahan', `${fmtNum(expired.length)} lot, ${fmtNum(totalQty)} unit sudah lewat tanggal`,
-        btn('⎙ Cetak daftar', { onclick: () => printDisposal(expired, data) }),
-        btn('⧉ Salin untuk WhatsApp', {
+        btn('Cetak daftar', { icon: 'cetak', onclick: () => printDisposal(expired, data) }),
+        btn('Salin untuk WhatsApp', { icon: 'salin',
           onclick: () => copyText(disposalText(expired, data))
             .then(() => toast('Daftar disalin', { tone: 'ok', detail: `${expired.length} lot siap ditempel ke pesan.` }))
             .catch(() => toast('Gagal menyalin', { tone: 'danger', detail: 'Papan klip tidak tersedia di browser ini.' })),
@@ -73,7 +73,7 @@ export function render({ data, summary }) {
       data.disposals.length === 0
         ? notice({
           tone: 'warn',
-          glyph: '▲',
+          icon: 'alert',
           title: 'Tab Pemusnahan masih kosong',
           body: 'Belum ada satu pun pemusnahan yang tercatat, padahal tunggakannya sebanyak daftar di bawah. Selama belum dicatat, stok yang sudah kedaluwarsa masih terhitung sebagai sisa stok.',
         })

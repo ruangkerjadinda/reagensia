@@ -6,7 +6,7 @@
  * memberi baris dan definisi kolom.
  */
 
-import { el, mount, empty, fmtNum } from './dom.js';
+import { el, mount, empty, fmtNum, btn } from './dom.js';
 import { downloadCsv } from './export.js';
 
 /**
@@ -121,9 +121,9 @@ export function dataTable(config) {
     countEl,
     foot || null,
     el('span.spacer'),
-    el('button.btn.btn--sm.btn--ghost.no-print', {
-      type: 'button',
-      text: '⭳ CSV',
+    btn('CSV', {
+      variant: 'ghost',
+      icon: 'unduh',
       title: 'Unduh baris yang sedang tampil sebagai CSV',
       onclick: () => downloadCsv(`${csvName}.csv`, columns, sorted(), valueOf),
     }));

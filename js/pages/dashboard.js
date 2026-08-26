@@ -9,7 +9,7 @@ import { openLotDrawer } from '../ui/shared.js';
 export const meta = {
   title: 'Dashboard',
   subtitle: 'Ringkasan stok reagen hari ini',
-  icon: '▦',
+  icon: 'dashboard',
 };
 
 export function render({ data, summary }) {
@@ -22,7 +22,7 @@ export function render({ data, summary }) {
   if (audit.expiredButActive.length) {
     page.append(notice({
       tone: 'danger',
-      glyph: '●',
+      icon: 'alert',
       title: `${audit.expiredButActive.length} lot sudah kedaluwarsa tapi masih berstatus AKTIF`,
       body: 'Selama statusnya AKTIF, reagen ini masih terbaca sebagai boleh dipakai. Ubah statusnya atau catat pemusnahannya.',
       action: btn('Lihat daftarnya', {

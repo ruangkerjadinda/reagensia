@@ -1,4 +1,5 @@
-import { el, cardHead, chip, barRow, fmtNum, fmtDate, btn } from '../ui/dom.js';
+import { el, cardHead, chip, barRow, fmtNum, fmtDate } from '../ui/dom.js';
+import { icon } from '../ui/icons.js';
 import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { meter } from '../charts/meter.js';
@@ -8,7 +9,7 @@ import { filterBar, applyFilters, openLotDrawer } from '../ui/shared.js';
 export const meta = {
   title: 'COA & MSDS',
   subtitle: 'Kelengkapan dokumen mutu dan keselamatan',
-  icon: '▣',
+  icon: 'dokumen',
 };
 
 export function render({ data, summary }) {
@@ -95,7 +96,7 @@ export function render({ data, summary }) {
           key: 'hasCoa',
           label: 'COA',
           render: (l) => (l.coaUrl
-            ? el('a.btn.btn--sm', { href: l.coaUrl, target: '_blank', rel: 'noopener', text: '↗ Buka', onclick: (e) => e.stopPropagation() })
+            ? el('a.btn.btn--sm', { href: l.coaUrl, target: '_blank', rel: 'noopener', onclick: (e) => e.stopPropagation() }, icon('keluar', { size: 14 }), el('span', { text: 'Buka' }))
             : chip('Belum ada', 'muted')),
           csv: (l) => (l.coaUrl || 'tidak ada'),
         },
@@ -103,7 +104,7 @@ export function render({ data, summary }) {
           key: 'hasMsds',
           label: 'MSDS',
           render: (l) => (l.msdsUrl
-            ? el('a.btn.btn--sm', { href: l.msdsUrl, target: '_blank', rel: 'noopener', text: '↗ Buka', onclick: (e) => e.stopPropagation() })
+            ? el('a.btn.btn--sm', { href: l.msdsUrl, target: '_blank', rel: 'noopener', onclick: (e) => e.stopPropagation() }, icon('keluar', { size: 14 }), el('span', { text: 'Buka' }))
             : chip('Belum ada', 'muted')),
           csv: (l) => (l.msdsUrl || 'tidak ada'),
         },
@@ -116,7 +117,7 @@ export function render({ data, summary }) {
         { key: '_row', label: 'Baris', align: 'num' },
       ],
       emptyState: {
-        glyph: '✓',
+        icon: 'centang',
         title: 'Semua dokumen lengkap',
         body: 'Setiap lot pada filter ini punya tautan COA dan MSDS.',
       },

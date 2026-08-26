@@ -7,10 +7,19 @@
   @page { margin: 14mm; size: A4; }
 
   :root {
-    --plane: #fff; --surface: #fff; --surface-raised: #fff; --surface-sunken: #fff;
-    --ink: #000; --ink-secondary: #333; --ink-muted: #555;
-    --border: #bbb; --border-strong: #888; --grid: #ddd; --axis: #888;
+    --plane: #fff; --plane-tint: #fff; --surface: #fff; --surface-raised: #fff; --surface-sunken: #fff;
+    --surface-hover: transparent; --surface-active: transparent; --surface-accent: transparent;
+    --ink: #000; --ink-secondary: #333; --ink-muted: #555; --muted-ink: #333;
+    --border: #bbb; --border-strong: #888; --grid: #ddd; --axis: #888; --highlight: transparent;
+    --accent-wash: transparent;
+    --shadow-xs: none; --shadow-sm: none; --shadow: none;
+    --shadow-md: none; --shadow-lg: none; --shadow-accent: none;
   }
+
+  /* Bidang halaman tidak boleh membawa gradien ke atas kertas. */
+  body { background-image: none !important; }
+  .card, .kpi, .notice, .btn, .input, .select { box-shadow: none !important; }
+  .kpi[data-tone]::before, .notice::before { display: none; }
 
   body { background: #fff; color: #000; font-size: 10.5pt; }
 

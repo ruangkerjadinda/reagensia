@@ -12,6 +12,7 @@ import { el, mount, chip, btn, fmtNum, notice } from './ui/dom.js';
 import { register, start, onNavigate, router, go, allRoutes } from './ui/router.js';
 import { applyTheme, syncMetaThemeColor } from './ui/theme.js';
 import { openPalette } from './ui/palette.js';
+import { icon } from './ui/icons.js';
 import { closeOverlay } from './ui/overlay.js';
 
 import * as dashboard from './pages/dashboard.js';
@@ -75,8 +76,8 @@ function renderNav() {
           document.body.dataset.nav = '';
         },
       },
-      el('span.nav-icon', { text: route.meta.icon, 'aria-hidden': 'true' }),
-      route.meta.title,
+      el('span.nav-icon', {}, icon(route.meta.icon, { size: 17 })),
+      el('span.nav-text', { text: route.meta.title }),
       count && count.value ? el('span.nav-count', { dataset: { tone: count.tone }, text: fmtNum(count.value) }) : null);
     }))));
 }
@@ -99,12 +100,12 @@ function renderTopbar() {
 
   mount(actionsHost,
     canWrite() ? chip('Mode input aktif', 'ok') : null,
-    btn('⌕ Cari', {
+    btn('Cari', { icon: 'cari',
       variant: 'ghost',
       title: 'Pencarian cepat (Ctrl+K)',
       onclick: () => openPalette(() => store.data),
     }),
-    btn('↻ Segarkan', {
+    btn('Segarkan', { icon: 'segarkan',
       onclick: () => load({ force: true }),
       title: 'Ambil ulang data dari Google Sheets',
     }));
@@ -150,7 +151,7 @@ function renderPage() {
     console.error(err);
     body = el('div.page', {}, notice({
       tone: 'danger',
-      glyph: '✕',
+      icon: 'silang',
       title: 'Halaman ini gagal digambar',
       body: String(err?.message || err),
     }));
@@ -159,7 +160,7 @@ function renderPage() {
   const banner = store.offline
     ? notice({
       tone: 'warn',
-      glyph: '▲',
+      icon: 'alert',
       title: 'Sedang luring — menampilkan data tersimpan',
       body: `${store.message} Angka di layar berasal dari pengambilan terakhir: ${lastSyncLabel()}.`,
       action: btn('Coba lagi', { onclick: () => load({ force: true }) }),
@@ -195,7 +196,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeOverlay();
 });
 
-document.getElementById('nav-toggle')?.addEventListener('click', () => {
+const navToggle = document.getElementById('nav-toggle');
+navToggle?.replaceChildren(icon('menu', { size: 18 }));
+navToggle?.addEventListener('click', () => {
   document.body.dataset.nav = document.body.dataset.nav === 'open' ? '' : 'open';
 });
 

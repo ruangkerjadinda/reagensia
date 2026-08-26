@@ -16,7 +16,7 @@ import { printWithTitle } from '../ui/export.js';
 export const meta = {
   title: 'Kartu Stok',
   subtitle: 'Saldo berjalan per lot, disusun dari transaksi',
-  icon: '▥',
+  icon: 'kartustok',
 };
 
 export function render({ data }) {
@@ -102,9 +102,9 @@ function card(lot, data) {
 
   return el('section.page-section', {},
     el('div.toolbar.no-print', {},
-      btn('← Kembali ke daftar', { variant: 'ghost', onclick: () => setParams({ lot: '' }) }),
+      btn('Kembali ke daftar', { icon: 'kembali', variant: 'ghost', onclick: () => setParams({ lot: '' }) }),
       el('span.spacer'),
-      btn('⎙ Cetak kartu', { onclick: () => printWithTitle(`Kartu Stok — ${lot.nama}`) })),
+      btn('Cetak kartu', { icon: 'cetak', onclick: () => printWithTitle(`Kartu Stok — ${lot.nama}`) })),
 
     el('div.print-only.print-head', {},
       el('h1', { text: 'Kartu Stok Reagen' }),
@@ -121,7 +121,7 @@ function card(lot, data) {
     !cocok
       ? notice({
         tone: 'warn',
-        glyph: '▲',
+        icon: 'alert',
         title: 'Saldo kartu berbeda dengan Sisa Stok di Master Stok',
         body: `Menjumlahkan transaksi menghasilkan ${fmtNum(akhir)}, sementara Master Stok baris ${lot._row} menulis ${fmtNum(lot.sisaStok)}. Selisih ini muncul kalau ada transaksi yang belum tercatat di tabnya, atau Sisa Stok diketik manual.`,
       })

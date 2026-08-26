@@ -10,13 +10,14 @@ import { el, cardHead, chip, fmtNum, fmtDate, btn, empty, notice } from '../ui/d
 import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { sheetLinkBtn, openLotDrawer, bucketChip } from '../ui/shared.js';
+import { icon } from '../ui/icons.js';
 import { sheetUrl } from '../config.js';
 import { SCHEMA } from '../data/schema.js';
 
 export const meta = {
   title: 'Audit Data',
   subtitle: 'Baris yang tidak konsisten di dalam sheet',
-  icon: '◎',
+  icon: 'audit',
 };
 
 export function render({ data, summary }) {
@@ -28,7 +29,7 @@ export function render({ data, summary }) {
 
   page.append(el('section.card', {},
     cardHead('Rekonsiliasi antar tab', 'Total di tab transaksi dibandingkan dengan kolom ringkasannya di Master Stok'),
-    el('table.data', {},
+    el('div.table-wrap', { style: { maxHeight: 'none' } }, el('table.data', {},
       el('thead', {}, el('tr', {},
         el('th', { text: 'Pemeriksaan' }),
         el('th.num', { text: 'Tab transaksi' }),
@@ -40,7 +41,7 @@ export function render({ data, summary }) {
         el('td.num', { text: fmtNum(r.transaksi) }),
         el('td.num', { text: fmtNum(r.master) }),
         el('td.num', { text: r.ok ? '—' : fmtNum(r.transaksi - r.master) }),
-        el('td', {}, r.ok ? chip('Cocok', 'ok') : chip('Selisih', 'danger')))))),
+        el('td', {}, r.ok ? chip('Cocok', 'ok') : chip('Selisih', 'danger'))))))),
     summary.reconciliation.some((r) => !r.ok)
       ? el('p', {
         style: { fontSize: '12px', color: 'var(--ink-secondary)', marginTop: '10px' },
@@ -128,7 +129,7 @@ export function render({ data, summary }) {
 
   if (!findings.length) {
     page.append(el('section.card', {}, empty({
-      glyph: '✓',
+      icon: 'centang',
       title: 'Tidak ada temuan',
       body: 'Semua baris Master Stok konsisten: status cocok dengan tanggal, Sisa Stok sama dengan hitungannya, dan kolom wajib terisi.',
     })));
@@ -139,7 +140,7 @@ export function render({ data, summary }) {
   if (audit.orphans.length) {
     page.append(notice({
       tone: 'warn',
-      glyph: '▲',
+      icon: 'alert',
       title: `${audit.orphans.length} baris transaksi tidak punya pasangan di Master Stok`,
       body: `Kombinasi Kode + Kode/Lot pada baris ini tidak ditemukan di Master Stok, biasanya karena beda penulisan lot: ${audit.orphans.map((o) => `${o.tab} baris ${o.row} (${o.kode})`).join(', ')}.`,
     }));
@@ -155,7 +156,7 @@ export function render({ data, summary }) {
         style: { fontSize: '12px', color: 'var(--ink-secondary)', marginBottom: '10px' },
         text: 'Perbedaan sekecil spasi ganda tidak terlihat saat menggulir sheet, tapi memecah satu supplier atau merk jadi dua kelompok terpisah di setiap filter, grafik, dan rekap.',
       }),
-      el('table.data', {},
+      el('div.table-wrap', { style: { maxHeight: 'none' } }, el('table.data', {},
         el('thead', {}, el('tr', {},
           el('th', { text: 'Kolom' }),
           el('th', { text: 'Ejaan yang dipakai' }),
@@ -175,7 +176,7 @@ export function render({ data, summary }) {
             rel: 'noopener',
             text: j === 0 ? String(row) : `, ${row}`,
             style: { fontSize: '12px' },
-          })), v.rows.length > 8 ? ` +${v.rows.length - 8}` : null))))))));
+          })), v.rows.length > 8 ? ` +${v.rows.length - 8}` : null)))))))));
   }
 
   /* ------------------------------------------------- daftar tiap temuan */
@@ -218,14 +219,13 @@ export function render({ data, summary }) {
             key: 'buka',
             label: '',
             sortable: false,
-            render: (l) => el('a.no-print', {
+            render: (l) => el('a.row-link.no-print', {
               href: sheetUrl('master', l._row),
               target: '_blank',
               rel: 'noopener',
-              text: '↗',
               title: `Buka baris ${l._row} di Google Sheets`,
               onclick: (e) => e.stopPropagation(),
-            }),
+            }, icon('keluar', { size: 14 })),
             csv: () => '',
           },
         ],
@@ -236,7 +236,7 @@ export function render({ data, summary }) {
     cardHead('Perbaikan dilakukan di Google Sheets'),
     el('p', {
       style: { fontSize: '13px', color: 'var(--ink-secondary)' },
-      text: 'Dashboard ini hanya membaca. Setiap baris di atas bisa dibuka langsung ke barisnya di spreadsheet lewat tanda ↗. Kalau mode input sudah aktif, rumus Sisa Stok akan otomatis dipulihkan setiap kali baris itu tersentuh transaksi baru.',
+      text: 'Dashboard ini hanya membaca. Setiap baris di atas bisa dibuka langsung ke barisnya di spreadsheet lewat ikon panah di ujung barisnya. Kalau mode input sudah aktif, rumus Sisa Stok akan otomatis dipulihkan setiap kali baris itu tersentuh transaksi baru.',
     }),
     el('div', { style: { marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
       ...Object.keys(SCHEMA).map((key) => sheetLinkBtn(key, null, SCHEMA[key].label)))));

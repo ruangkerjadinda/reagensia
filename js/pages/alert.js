@@ -10,7 +10,7 @@ import { groupBy } from '../data/normalize.js';
 export const meta = {
   title: 'Alert',
   subtitle: 'Daftar tindakan, diurutkan menurut akibatnya',
-  icon: '⚠',
+  icon: 'alert',
 };
 
 export function render({ data }) {
@@ -24,8 +24,8 @@ export function render({ data }) {
     fields: ['instalasi', 'pic'],
     placeholder: 'Cari reagen atau lot di dalam alert…',
     extra: [
-      btn('⎙ Cetak', { onclick: () => printAlerts(alerts, data) }),
-      btn('⧉ Salin ringkasan', {
+      btn('Cetak', { icon: 'cetak', onclick: () => printAlerts(alerts, data) }),
+      btn('Salin ringkasan', { icon: 'salin',
         onclick: () => copyText(alertText(alerts, data))
           .then(() => toast('Ringkasan disalin', { tone: 'ok', detail: 'Siap ditempel ke pesan.' }))
           .catch(() => toast('Gagal menyalin', { tone: 'danger' })),
@@ -35,7 +35,7 @@ export function render({ data }) {
 
   if (!alerts.length) {
     page.append(el('section.card', {}, empty({
-      glyph: '✓',
+      icon: 'centang',
       title: 'Tidak ada yang perlu ditindaklanjuti',
       body: 'Dengan filter ini, semua lot berada dalam masa berlaku dan di atas stok minimum.',
     })));

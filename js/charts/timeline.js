@@ -37,6 +37,17 @@ export function expiryTimeline(series, { onSelect, metric = 'count' } = {}) {
     'aria-label': `Sebaran kedaluwarsa: ${series.map((d) => `${d.label} ${value(d)}`).join(', ')}`,
   });
 
+  // Gradien halus dari atas batang ke dasarnya: memberi kesan bahan tanpa
+  // mengubah warna yang dibaca — puncak batanglah yang paling pekat, dan itu
+  // justru bagian yang dipakai membandingkan tinggi.
+  const defs = svgEl('defs');
+  for (const [id, color] of [['grad-utama', 'var(--series-1)'], ['grad-tunggakan', 'var(--critical)']]) {
+    defs.append(svgEl('linearGradient', { id, x1: '0', y1: '0', x2: '0', y2: '1' },
+      svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '1' }),
+      svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.72' })));
+  }
+  svg.append(defs);
+
   // Kisi resesif di belakang tanda.
   for (const t of ticks) {
     svg.append(svgEl('line.grid-line', { x1: PAD.left, x2: width - PAD.right, y1: y(t), y2: y(t) }));
@@ -52,7 +63,7 @@ export function expiryTimeline(series, { onSelect, metric = 'count' } = {}) {
     const v = value(d);
     const x = PAD.left + i * slot + (slot - barW) / 2;
     const h = (v / top) * inner.h;
-    const fill = d.isBacklog ? 'var(--critical)' : 'var(--series-1)';
+    const fill = d.isBacklog ? 'url(#grad-tunggakan)' : 'url(#grad-utama)';
 
     if (h > 0) {
       const bar = svgEl('path.mark', {

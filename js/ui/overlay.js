@@ -1,6 +1,7 @@
 /** Lapisan di atas halaman: laci detail, dialog, konfirmasi, dan toast. */
 
 import { el, mount, btn } from './dom.js';
+import { icon } from './icons.js';
 
 let openOverlay = null;
 
@@ -71,7 +72,7 @@ export function drawer({ title, subtitle, body, actions = [] }) {
     el('div.drawer-head', {},
       el('div', {}, el('h3', { text: title }), subtitle && el('p', { text: subtitle })),
       el('span.spacer', { style: { marginLeft: 'auto' } }),
-      el('button.btn.btn--ghost.btn--sm', { type: 'button', text: '✕', 'aria-label': 'Tutup', onclick: () => closeOverlay() })),
+      el('button.btn.btn--ghost.btn--sm.btn--icon', { type: 'button', 'aria-label': 'Tutup', onclick: () => closeOverlay() }, icon('tutup', { size: 16 }))),
     el('div.drawer-body', {}, body),
     actions.length ? el('div.drawer-foot', {}, ...actions) : null);
 
@@ -161,9 +162,9 @@ export function toast(message, { tone = 'info', detail, timeout = 5000 } = {}) {
     document.body.append(toastHost);
   }
 
-  const glyph = { ok: '✓', danger: '✕', warn: '▲', info: 'ℹ' }[tone] || 'ℹ';
+  const name = { ok: 'centang', danger: 'silang', warn: 'alert', info: 'info' }[tone] || 'info';
   const node = el('div.toast', { dataset: { tone } },
-    el('span', { text: glyph, 'aria-hidden': 'true' }),
+    icon(name, { size: 17, className: 'toast-icon' }),
     el('div', {}, el('strong', { text: message }), detail && el('p', { text: detail })));
 
   toastHost.append(node);
