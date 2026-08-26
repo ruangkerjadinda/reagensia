@@ -8,7 +8,7 @@ import { openLotDrawer } from '../ui/shared.js';
 export const meta = {
   title: 'Transaksi',
   subtitle: 'Penerimaan, distribusi, dan pemusnahan',
-  icon: '⇄',
+  icon: 'transaksi',
 };
 
 const TABS = [
@@ -32,7 +32,7 @@ export function render({ data }) {
     }))),
     el('span.spacer'),
     canWrite()
-      ? btn(`+ Tambah ${active.label.toLowerCase()}`, {
+      ? btn(`Tambah ${active.label.toLowerCase()}`, { icon: 'tambah',
         variant: 'primary',
         onclick: () => openTransactionForm(active.key, { data }),
       })
@@ -58,7 +58,7 @@ function writeSetupNotice() {
   const configured = Boolean(CONFIG.endpoint.url);
   return notice({
     tone: 'info',
-    glyph: 'ℹ',
+    icon: 'info',
     title: configured ? 'Mode input belum dinyalakan' : 'Mode input belum disiapkan',
     body: configured
       ? 'Endpoint sudah terisi, tapi mode input masih dimatikan. Nyalakan di halaman Pengaturan kalau memang siap menulis ke spreadsheet.'

@@ -1,40 +1,44 @@
 /*
  * Token desain.
  *
- * Palet warna grafik sudah lolos validator data-viz di kedua mode:
- *  - trio kategorikal instalasi  → PASS all-pairs
- *  - dua seri (biru / merah)     → PASS all-pairs
- *  - ramp ordinal biru 250–650   → PASS ordinal
+ * Netral di sini sengaja condong ke biru dingin, bukan abu-abu hangat, dan
+ * kartu memakai putih penuh di atas bidang halaman yang lebih gelap. Versi
+ * pertama memakai kartu #fcfcfb di atas bidang #f9f9f7 — beda 1% — sehingga
+ * tidak ada satu pun kartu yang terbaca sebagai benda terpisah, dan seluruh
+ * halaman menyatu jadi satu bidang datar.
  *
- * Warna status (kritis/serius/peringatan/aman) selalu tampil bersama ikon dan
- * teks, tidak pernah sebagai warna semata — di mode terang beberapa di antaranya
- * memang di bawah kontras 3:1 dan label itulah penebusnya. Karena itu tingkat
- * risiko tidak pernah digambar sebagai potongan-potongan berdampingan dalam satu
- * batang; distribusinya memakai batang satu warna yang diberi label langsung.
+ * Palet grafik lolos validator data-viz di kedua mode terhadap permukaan baru
+ * ini: trio kategorikal instalasi, dua seri biru/merah, dan ramp ordinal.
+ *
+ * Warna status (kritis/serius/peringatan/aman) tetap sama dan selalu tampil
+ * bersama penanda bentuk dan teks, tidak pernah sebagai warna semata.
  */
 
 :root {
   color-scheme: light;
 
-  /* Permukaan */
-  --plane: #f9f9f7;
-  --surface: #fcfcfb;
+  /* Permukaan — jarak antara bidang dan kartu yang membuat kartu terlihat */
+  --plane: #eef0f4;
+  --plane-tint: #e7eaf0;
+  --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f2f2ef;
-  --surface-hover: rgba(11, 11, 11, 0.04);
-  --surface-active: rgba(11, 11, 11, 0.07);
+  --surface-sunken: #f4f6f9;
+  --surface-hover: rgba(15, 23, 42, 0.04);
+  --surface-active: rgba(15, 23, 42, 0.07);
+  --surface-accent: rgba(42, 120, 214, 0.08);
 
   /* Tinta */
-  --ink: #0b0b0b;
-  --ink-secondary: #52514e;
-  --ink-muted: #898781;
+  --ink: #0f172a;
+  --ink-secondary: #4a5568;
+  --ink-muted: #66748a;
   --ink-inverse: #ffffff;
 
   /* Garis */
-  --border: rgba(11, 11, 11, 0.12);
-  --border-strong: rgba(11, 11, 11, 0.22);
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
+  --border: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --grid: #e6e9ef;
+  --axis: #c3cad6;
+  --highlight: rgba(255, 255, 255, 0.7);
 
   /* Status — tetap, tidak ikut tema */
   --critical: #d03b3b;
@@ -42,22 +46,20 @@
   --warning: #fab219;
   --info: #2a78d6;
   --good: #0ca30c;
-  --muted-status: #898781;
 
-  /* Latar lembut untuk chip status */
-  --critical-wash: rgba(208, 59, 59, 0.12);
-  --serious-wash: rgba(236, 131, 90, 0.16);
-  --warning-wash: rgba(250, 178, 25, 0.18);
-  --info-wash: rgba(42, 120, 214, 0.12);
-  --good-wash: rgba(12, 163, 12, 0.12);
-  --muted-wash: rgba(137, 135, 129, 0.14);
+  --critical-wash: rgba(208, 59, 59, 0.1);
+  --serious-wash: rgba(236, 131, 90, 0.14);
+  --warning-wash: rgba(250, 178, 25, 0.16);
+  --info-wash: rgba(42, 120, 214, 0.1);
+  --good-wash: rgba(12, 163, 12, 0.1);
+  --muted-wash: rgba(133, 146, 166, 0.13);
 
-  /* Teks status yang cukup kontras untuk dibaca di atas wash */
-  --critical-ink: #9b2020;
-  --serious-ink: #9a4419;
+  --critical-ink: #a52121;
+  --serious-ink: #97410f;
   --warning-ink: #7a5300;
   --info-ink: #1c5cab;
-  --good-ink: #006300;
+  --good-ink: #04720a;
+  --muted-ink: #55627a;
 
   /* Grafik: kategorikal (maksimum tiga slot, semuanya diberi label langsung) */
   --series-1: #2a78d6;
@@ -73,14 +75,16 @@
 
   /* Aksen antarmuka */
   --accent: #2a78d6;
+  --accent-strong: #1c5cab;
   --accent-ink: #ffffff;
-  --accent-hover: #1c5cab;
+  --accent-wash: rgba(42, 120, 214, 0.1);
   --focus: #2a78d6;
 
   /* Bentuk & ritme */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 16px;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius: 13px;
+  --radius-lg: 18px;
   --radius-pill: 999px;
 
   --space-1: 4px;
@@ -91,15 +95,20 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --shadow-sm: 0 1px 2px rgba(11, 11, 11, 0.06);
-  --shadow: 0 2px 8px rgba(11, 11, 11, 0.08);
-  --shadow-lg: 0 12px 32px rgba(11, 11, 11, 0.16);
+  /* Bayangan berlapis; lapisan pertama rapat untuk ketegasan tepi */
+  --shadow-xs: 0 1px 1px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.06), 0 20px 48px rgba(15, 23, 42, 0.16);
+  --shadow-accent: 0 1px 2px rgba(28, 92, 171, 0.3), 0 4px 12px rgba(42, 120, 214, 0.25);
 
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
+  --font: ui-sans-serif, system-ui, 'Segoe UI Variable Text', 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: ui-sans-serif, system-ui, 'Segoe UI Variable Display', 'Segoe UI', Inter, Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
 
-  --sidebar-w: 248px;
-  --topbar-h: 60px;
+  --sidebar-w: 250px;
+  --topbar-h: 62px;
 }
 
 /* Mode gelap dari preferensi sistem — dilewati kalau pengguna memilih terang. */
@@ -107,35 +116,39 @@
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    --plane: #0d0d0d;
-    --surface: #1a1a19;
-    --surface-raised: #232322;
-    --surface-sunken: #141413;
-    --surface-hover: rgba(255, 255, 255, 0.06);
-    --surface-active: rgba(255, 255, 255, 0.1);
+    --plane: #0a0c10;
+    --plane-tint: #0d1015;
+    --surface: #15181e;
+    --surface-raised: #1b1f27;
+    --surface-sunken: #101319;
+    --surface-hover: rgba(255, 255, 255, 0.05);
+    --surface-active: rgba(255, 255, 255, 0.09);
+    --surface-accent: rgba(57, 135, 229, 0.14);
 
-    --ink: #ffffff;
-    --ink-secondary: #c3c2b7;
-    --ink-muted: #898781;
-    --ink-inverse: #0b0b0b;
+    --ink: #f2f5f9;
+    --ink-secondary: #a8b3c4;
+    --ink-muted: #7b8a9f;
+    --ink-inverse: #0a0c10;
 
-    --border: rgba(255, 255, 255, 0.12);
-    --border-strong: rgba(255, 255, 255, 0.24);
-    --grid: #2c2c2a;
-    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --grid: #232833;
+    --axis: #333b49;
+    --highlight: rgba(255, 255, 255, 0.06);
 
-    --critical-wash: rgba(208, 59, 59, 0.2);
-    --serious-wash: rgba(236, 131, 90, 0.18);
-    --warning-wash: rgba(250, 178, 25, 0.16);
-    --info-wash: rgba(57, 135, 229, 0.18);
-    --good-wash: rgba(12, 163, 12, 0.18);
-    --muted-wash: rgba(137, 135, 129, 0.2);
+    --critical-wash: rgba(208, 59, 59, 0.18);
+    --serious-wash: rgba(236, 131, 90, 0.16);
+    --warning-wash: rgba(250, 178, 25, 0.15);
+    --info-wash: rgba(57, 135, 229, 0.16);
+    --good-wash: rgba(12, 163, 12, 0.16);
+    --muted-wash: rgba(168, 179, 196, 0.14);
 
-    --critical-ink: #f0908f;
+    --critical-ink: #f19392;
     --serious-ink: #f0a882;
     --warning-ink: #f5c460;
     --info-ink: #8fbdf3;
-    --good-ink: #5cc85c;
+    --good-ink: #5fca5f;
+    --muted-ink: #a8b3c4;
 
     --series-1: #3987e5;
     --series-2: #d95926;
@@ -148,13 +161,17 @@
     --ramp-5: #184f95;
 
     --accent: #3987e5;
-    --accent-ink: #0b0b0b;
-    --accent-hover: #6da7ec;
+    --accent-strong: #6da7ec;
+    --accent-ink: #06090f;
+    --accent-wash: rgba(57, 135, 229, 0.16);
     --focus: #6da7ec;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+    --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 48px rgba(0, 0, 0, 0.6);
+    --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(57, 135, 229, 0.3);
   }
 }
 
@@ -162,35 +179,39 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --plane: #0d0d0d;
-  --surface: #1a1a19;
-  --surface-raised: #232322;
-  --surface-sunken: #141413;
-  --surface-hover: rgba(255, 255, 255, 0.06);
-  --surface-active: rgba(255, 255, 255, 0.1);
+  --plane: #0a0c10;
+  --plane-tint: #0d1015;
+  --surface: #15181e;
+  --surface-raised: #1b1f27;
+  --surface-sunken: #101319;
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-active: rgba(255, 255, 255, 0.09);
+  --surface-accent: rgba(57, 135, 229, 0.14);
 
-  --ink: #ffffff;
-  --ink-secondary: #c3c2b7;
-  --ink-muted: #898781;
-  --ink-inverse: #0b0b0b;
+  --ink: #f2f5f9;
+  --ink-secondary: #a8b3c4;
+  --ink-muted: #7b8a9f;
+  --ink-inverse: #0a0c10;
 
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.24);
-  --grid: #2c2c2a;
-  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --grid: #232833;
+  --axis: #333b49;
+  --highlight: rgba(255, 255, 255, 0.06);
 
-  --critical-wash: rgba(208, 59, 59, 0.2);
-  --serious-wash: rgba(236, 131, 90, 0.18);
-  --warning-wash: rgba(250, 178, 25, 0.16);
-  --info-wash: rgba(57, 135, 229, 0.18);
-  --good-wash: rgba(12, 163, 12, 0.18);
-  --muted-wash: rgba(137, 135, 129, 0.2);
+  --critical-wash: rgba(208, 59, 59, 0.18);
+  --serious-wash: rgba(236, 131, 90, 0.16);
+  --warning-wash: rgba(250, 178, 25, 0.15);
+  --info-wash: rgba(57, 135, 229, 0.16);
+  --good-wash: rgba(12, 163, 12, 0.16);
+  --muted-wash: rgba(168, 179, 196, 0.14);
 
-  --critical-ink: #f0908f;
+  --critical-ink: #f19392;
   --serious-ink: #f0a882;
   --warning-ink: #f5c460;
   --info-ink: #8fbdf3;
-  --good-ink: #5cc85c;
+  --good-ink: #5fca5f;
+  --muted-ink: #a8b3c4;
 
   --series-1: #3987e5;
   --series-2: #d95926;
@@ -203,11 +224,15 @@
   --ramp-5: #184f95;
 
   --accent: #3987e5;
-  --accent-ink: #0b0b0b;
-  --accent-hover: #6da7ec;
+  --accent-strong: #6da7ec;
+  --accent-ink: #06090f;
+  --accent-wash: rgba(57, 135, 229, 0.16);
   --focus: #6da7ec;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 48px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(57, 135, 229, 0.3);
 }

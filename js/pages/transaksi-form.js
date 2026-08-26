@@ -202,7 +202,7 @@ export function openTransactionForm(kind, { data, lot: preselected }) {
     );
     dialog.setBody(reviewBody(kind, values, currentLot));
 
-    const back = btn('← Ubah lagi', { onclick: showForm });
+    const back = btn('Ubah lagi', { icon: 'kembali', onclick: showForm });
     const save = btn('Simpan ke spreadsheet', {
       variant: kind === 'pemusnahan' ? 'danger' : 'primary',
       onclick: () => send(kind, values, currentLot, { dialog, save, back, showForm }),

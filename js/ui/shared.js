@@ -4,6 +4,7 @@
  */
 
 import { el, chip, fmtDate, fmtDays, fmtNum, btn, empty } from './dom.js';
+import { icon } from './icons.js';
 import { drawer } from './overlay.js';
 import { router, setParams } from './router.js';
 import { BUCKET_META } from '../data/normalize.js';
@@ -32,9 +33,8 @@ export function sheetLinkBtn(tabKey, row, label = 'Buka di Sheets') {
     href: sheetUrl(tabKey, row),
     target: '_blank',
     rel: 'noopener',
-    text: `↗ ${label}`,
     title: `Buka baris ${row} tab ini di Google Sheets`,
-  });
+  }, icon('keluar', { size: 14 }), el('span', { text: label }));
 }
 
 /* ------------------------------------------------------------------ filter */
@@ -126,7 +126,7 @@ export function filterBar({ lots, fields = ['instalasi', 'kategori', 'status', '
     : null;
 
   return el('div.toolbar.no-print', {},
-    el('div.search', {}, el('span.search-icon', { text: '⌕', 'aria-hidden': 'true' }), searchInput),
+    el('div.search', {}, el('span.search-icon', {}, icon('cari', { size: 15 })), searchInput),
     ...selects,
     ...extra,
     reset ? el('span.spacer') : null,
@@ -205,8 +205,8 @@ export function openLotDrawer(lot) {
         : empty({ title: 'Belum ada transaksi', body: 'Lot ini belum pernah muncul di tab Penerimaan, Distribusi, atau Pemusnahan.' })),
 
       lot.coaUrl || lot.msdsUrl ? section('Dokumen', el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-        lot.coaUrl && el('a.btn.btn--sm', { href: lot.coaUrl, target: '_blank', rel: 'noopener', text: '↗ COA' }),
-        lot.msdsUrl && el('a.btn.btn--sm', { href: lot.msdsUrl, target: '_blank', rel: 'noopener', text: '↗ MSDS' }))) : null),
+        lot.coaUrl && el('a.btn.btn--sm', { href: lot.coaUrl, target: '_blank', rel: 'noopener' }, icon('keluar', { size: 14 }), el('span', { text: 'COA' })),
+        lot.msdsUrl && el('a.btn.btn--sm', { href: lot.msdsUrl, target: '_blank', rel: 'noopener' }, icon('keluar', { size: 14 }), el('span', { text: 'MSDS' })))) : null),
     actions: [sheetLinkBtn('master', lot._row, `Baris ${lot._row} di Master Stok`)],
   });
 }

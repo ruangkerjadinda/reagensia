@@ -1,5 +1,7 @@
 /** Pembantu DOM dan pemformatan. Semua teks masuk lewat textContent, tidak ada innerHTML. */
 
+import { icon as iconEl, toneMark } from './icons.js';
+
 /**
  * el('div.card', { onclick }, child, child…)
  *
@@ -94,20 +96,22 @@ export const fmtPct = (v) => (v == null ? '—' : `${v}%`);
 
 /* --------------------------------------------------------------- komponen kecil */
 
-const TONE_GLYPH = {
-  danger: '●',
-  serious: '●',
-  warn: '▲',
-  watch: '◆',
-  ok: '✓',
-  muted: '○',
+/** Ikon bawaan tiap nada pesan, dipakai kalau pemanggil tidak menyebut sendiri. */
+const TONE_ICON = {
+  danger: 'alert',
+  serious: 'alert',
+  warn: 'alert',
+  watch: 'info',
+  ok: 'centang',
+  info: 'info',
+  muted: 'info',
 };
 
 /**
- * Chip status selalu membawa ikon dan teks — warna tidak pernah jadi satu-satunya
- * penanda. Dipanggil dengan label kosong, ia jadi titik penanda murni; dalam hal
- * itu teksnya selalu sudah ada tepat di sebelahnya, jadi chipnya disembunyikan
- * dari pembaca layar agar tidak terbaca dua kali.
+ * Chip status selalu membawa penanda bentuk dan teks — warna tidak pernah jadi
+ * satu-satunya pembawa arti. Dipanggil dengan label kosong, ia jadi penanda
+ * murni; teksnya selalu sudah ada tepat di sebelahnya, jadi chipnya
+ * disembunyikan dari pembaca layar agar tidak terbaca dua kali.
  */
 export function chip(label, tone = 'muted', title) {
   const bare = !label;
@@ -116,13 +120,13 @@ export function chip(label, tone = 'muted', title) {
     title: title || label || undefined,
     'aria-hidden': bare ? 'true' : undefined,
   },
-  el('span.chip-glyph', { text: TONE_GLYPH[tone] || '○', 'aria-hidden': 'true' }),
+  toneMark(tone),
   label);
 }
 
-export function notice({ tone = 'info', glyph = 'ℹ', title, body, action }) {
+export function notice({ tone = 'info', icon: name, title, body, action }) {
   return el('div.notice', { dataset: { tone } },
-    el('span.notice-glyph', { text: glyph, 'aria-hidden': 'true' }),
+    iconEl(name || TONE_ICON[tone] || 'info', { size: 18, className: 'notice-glyph' }),
     el('div.notice-body', {},
       title && el('strong', { text: title }),
       body && el('p', { text: body })),
@@ -130,9 +134,9 @@ export function notice({ tone = 'info', glyph = 'ℹ', title, body, action }) {
     action);
 }
 
-export function empty({ glyph = '◍', title, body, action }) {
+export function empty({ icon: name = 'kosong', title, body, action }) {
   return el('div.empty', {},
-    el('div.empty-glyph', { text: glyph, 'aria-hidden': 'true' }),
+    el('span.empty-glyph', {}, iconEl(name, { size: 26 })),
     title && el('h4', { text: title }),
     body && el('p', { text: body }),
     action);
@@ -166,8 +170,12 @@ export function cardHead(title, subtitle, ...actions) {
     ...actions);
 }
 
-export function btn(label, { variant = '', onclick, title, disabled, type = 'button' } = {}) {
-  return el(`button.btn${variant ? `.btn--${variant}` : ''}`, { onclick, title, disabled, type, text: label });
+export function btn(label, { variant = '', onclick, title, disabled, type = 'button', icon: name } = {}) {
+  const node = el(`button.btn${variant ? `.btn--${variant}` : ''}`, { onclick, title, disabled, type },
+    name ? iconEl(name, { size: 15 }) : null,
+    label ? el('span', { text: label }) : null);
+  if (!label) node.classList.add('btn--icon');
+  return node;
 }
 
 /** Bilah horizontal berlabel — bentuk yang dipakai untuk semua distribusi satu seri. */

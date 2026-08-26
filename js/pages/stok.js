@@ -7,7 +7,7 @@ import { filterBar, applyFilters, bucketChip, openLotDrawer } from '../ui/shared
 export const meta = {
   title: 'Stok & Pemakaian',
   subtitle: 'Sisa stok, laju pakai, dan usulan pengadaan',
-  icon: '▧',
+  icon: 'stok',
 };
 
 export function render({ data, summary }) {
@@ -46,7 +46,7 @@ export function render({ data, summary }) {
   if (data.issues.length < 30) {
     page.append(notice({
       tone: 'info',
-      glyph: 'ℹ',
+      icon: 'info',
       title: 'Laju pakai dihitung dari riwayat yang masih pendek',
       body: `Baru ada ${fmtNum(data.issues.length)} baris distribusi tercatat, jadi angka "bulan tersisa" di bawah lebih baik dibaca sebagai indikasi arah, bukan ramalan.`,
     }));

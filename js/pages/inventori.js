@@ -7,7 +7,7 @@ import { groupBy } from '../data/normalize.js';
 export const meta = {
   title: 'Inventori',
   subtitle: 'Seluruh lot di Master Stok',
-  icon: '▤',
+  icon: 'inventori',
 };
 
 export function render({ data }) {

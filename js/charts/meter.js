@@ -27,6 +27,11 @@ export function meter({ label, part, whole, tone = 'info', note, onclick }) {
   el('span.kpi-label', { text: label }),
   el('span.kpi-value', {}, `${pctValue}`, el('small', { text: '%' })),
   el('div.bar-track', { style: { marginTop: '6px', marginBottom: '4px' } },
-    el('div.bar-fill', { style: { width: `${Math.min(pctValue, 100)}%`, background: color } })),
+    el('div.bar-fill', {
+      style: {
+        width: `${Math.min(pctValue, 100)}%`,
+        background: `linear-gradient(90deg, color-mix(in srgb, ${color} 78%, transparent), ${color})`,
+      },
+    })),
   el('span.kpi-note', { text: note || `${fmtNum(part)} dari ${fmtNum(whole)}` }));
 }
