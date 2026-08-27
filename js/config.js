@@ -28,6 +28,7 @@ const DEFAULTS = {
   writeEnabled: false,
 
   theme: 'system', // 'system' | 'light' | 'dark'
+  palette: 'sakura', // 'sakura' | 'mint' | 'lavender' | 'peach'
 };
 
 export const APP = {

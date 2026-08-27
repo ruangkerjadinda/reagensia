@@ -12,10 +12,56 @@ export const meta = {
   icon: 'dashboard',
 };
 
+/** Sapaan mengikuti jam di perangkat pengguna, bukan `data.today` — itu tanggal
+ * "per kapan" data dihitung, bukan jam pengguna melihatnya. */
+function greeting(now = new Date()) {
+  const h = now.getHours();
+  if (h < 11) return 'Selamat pagi';
+  if (h < 15) return 'Selamat siang';
+  if (h < 19) return 'Selamat sore';
+  return 'Selamat malam';
+}
+
+/** Maskot labu erlenmeyer kecil, khusus halaman Dashboard — lihat CLAUDE.md
+ * "Yang belum dikerjakan" untuk batasannya (tidak pernah di halaman lain atau
+ * saat dicetak). Warnanya semua token, jadi ikut berganti tema/palet. */
+function mascotSvg() {
+  return `
+    <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="mascotLiquid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style="stop-color:var(--accent)"/>
+          <stop offset="1" style="stop-color:var(--accent-strong)"/>
+        </linearGradient>
+        <clipPath id="mascotClip"><circle cx="32" cy="41" r="19"/></clipPath>
+      </defs>
+      <circle cx="32" cy="41" r="19" fill="var(--surface)" stroke="var(--border-strong)" stroke-width="2"/>
+      <rect x="28" y="6" width="8" height="18" rx="2" fill="var(--surface)" stroke="var(--border-strong)" stroke-width="2"/>
+      <g clip-path="url(#mascotClip)">
+        <path d="M8 48 C15 44 21 51 28 47 C35 43 41 50 48 46 L48 66 L8 66 Z" fill="url(#mascotLiquid)"/>
+      </g>
+      <path d="M20 30 A14 14 0 0 1 28 24" stroke="var(--highlight)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="10" r="1.3" fill="var(--accent)" opacity="0.5"/>
+      <circle cx="35" cy="4.5" r="1" fill="var(--accent)" opacity="0.35"/>
+      <circle cx="26" cy="36" r="2.1" fill="var(--ink)"/>
+      <circle cx="38" cy="36" r="2.1" fill="var(--ink)"/>
+      <ellipse cx="20.5" cy="38.5" rx="2.4" ry="1.5" fill="var(--accent)" opacity="0.35"/>
+      <ellipse cx="43.5" cy="38.5" rx="2.4" ry="1.5" fill="var(--accent)" opacity="0.35"/>
+      <path d="M27 41.5 Q32 45.5 37 41.5" stroke="var(--ink)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  `;
+}
+
 export function render({ data, summary }) {
   const { buckets, audit } = summary;
 
   const page = el('div.page');
+
+  /* ------------------------------------------------------------ maskot */
+
+  page.append(el('div.mascot-row.no-print', {},
+    el('div.mascot-badge', { html: mascotSvg() }),
+    el('div.mascot-greet', { text: `${greeting()}!` })));
 
   /* --------------------------------------------------- baris peringatan */
 

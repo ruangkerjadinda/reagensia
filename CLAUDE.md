@@ -110,17 +110,45 @@ Semua warna dan bentuk adalah custom property di `css/tokens.css`, dalam tiga
 lingkup: `:root` (terang), `@media (prefers-color-scheme: dark)` dengan penjaga
 `:root:not([data-theme='light'])`, dan `:root[data-theme='dark']`.
 
-**Karena itu tema tambahan murah** — satu blok `[data-theme='…']` per tema, tanpa
-menyentuh kode halaman.
+**Pemilih tema warna sudah terpasang** di halaman Pengaturan — empat pilihan,
+Sakura (default), Mint Klinik, Lavender Senja, Peach Sorbet, disimpan sebagai
+`CONFIG.palette` dan ditulis ke atribut `[data-palette]` di `<html>` lewat
+`applyPalette()` (`js/ui/theme.js`). Atribut itu **selalu terisi** (tidak
+pernah dihapus), jadi setiap blok warna di `tokens.css` cukup menimpa "biji"-nya
+sendiri (`--plane`, `--surface`, `--ink`, `--ink-muted`, `--border`, `--accent`,
+`--accent-strong`, `--accent-wash`) — token turunan (`--plane-tint`, `--grid`,
+`--axis`, `--ink-secondary`, bayangan, dst.) ditulis sekali lewat `color-mix()`
+dan menghitung ulang sendiri dari biji yang sedang aktif. **Menambah tema
+kelima berarti menambah satu blok biji terang + satu blok biji gelap, bukan
+menyalin seluruh berkas.** Bentuknya ("Level 2": sudut 13→20 px, tombol
+kapsul, bayangan lebih empuk) berlaku sama untuk keempat warna dan
+didefinisikan sekali di `:root`, tidak per tema. Detail lengkapnya ada di
+komentar kepala `css/tokens.css`; contoh visualnya (kalau mau bikin tema baru)
+masih di `design/theme-preview.html`.
 
-Palet grafik sudah divalidasi dengan validator skill `dataviz` terhadap
-permukaan sekarang (`#ffffff` terang / `#15181e` gelap): trio kategorikal
-instalasi, dua seri biru/merah, dan ramp ordinal — semuanya lolos di kedua mode.
-**Kalau permukaan diubah, jalankan ulang validatornya.**
+Palet grafik (series/ramp) sudah divalidasi dengan validator skill `dataviz`
+terhadap permukaan biru lama (`#ffffff` terang / `#15181e` gelap): trio
+kategorikal instalasi, dua seri biru/merah, dan ramp ordinal — semuanya lolos
+di kedua mode. **Permukaan gelap keempat tema warna sekarang berbeda-beda**
+(merah muda/hijau/ungu/oranye tua untuk Sakura/Mint/Lavender/Peach), dan
+validator itu belum dijalankan ulang terhadap ketiganya selain biru — series
+dan ramp sengaja dibiarkan sama di semua tema (lihat paragraf di bawah), tapi
+kontrasnya di atas permukaan baru belum dipastikan. **Jalankan ulang
+validatornya sebelum mengandalkan grafik di mode gelap non-Sakura.**
 
-Warna status (kritis/serius/peringatan/aman) sengaja tidak ikut tema — warnanya
-membawa arti klinis. Semuanya selalu tampil bersama penanda bentuk (`toneMark`)
-dan teks, tidak pernah warna semata.
+Warna status (kritis/serius/peringatan/aman) dan palet grafik sengaja tidak
+ikut tema warna — warnanya membawa arti klinis/kategorikal, bukan selera.
+Status selalu tampil bersama penanda bentuk (`toneMark`) dan teks, tidak
+pernah warna semata.
+
+**Maskot** (labu erlenmeyer kecil bermuka, `mascotSvg()` di `js/pages/dashboard.js`)
+sudah terpasang, dengan sapaan yang ikut jam perangkat (`greeting()`, bukan
+`data.today`). Sengaja hanya dirender di dalam `dashboard.js` — **jangan
+dipindah ke topbar/kerangka bersama**, supaya tetap tidak pernah tampil di
+halaman lain. Elemen pembungkusnya (`.mascot-row`) membawa kelas `.no-print`
+supaya juga tidak ikut tercetak. Warnanya semua token (`--surface`, `--ink`,
+`--accent`, `--accent-strong`, `--border-strong`, `--highlight`), jadi ikut
+berganti tema/palet tanpa disentuh.
 
 ## Mode input
 
@@ -179,16 +207,6 @@ Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 
 ## Yang belum dikerjakan
 
-- **Pemilih tema** di halaman Pengaturan. Empat kandidat sudah dipratinjau dan
-  disetujui arahannya: Sakura, Mint Klinik, Lavender Senja, Peach Sorbet —
-  masing-masing terang dan gelap, pada "Level 2" (warna **dan** bentuk lebih
-  membulat: sudut 13→20 px, tombol kapsul, bayangan lebih empuk).
-  **Palet lengkap keempatnya ada di `design/theme-preview.html`** — berkas itu
-  halaman mandiri yang dipakai memilih, dan nilai heksanya bisa diangkat
-  langsung dari sana ke `css/tokens.css`.
-- **Maskot kecil di halaman Dashboard.** Disetujui, dengan batas: SVG inline
-  memakai token warna supaya ikut berganti tema, hanya di Dashboard, tidak
-  pernah muncul di Audit, Alert, tabel, atau apa pun yang dicetak.
 - Level 3 (ilustrasi, animasi) **ditunda** — bukan ditolak.
 - Salin `user.email` bentuk ber-ID dari Settings → Emails miliknya kalau ingin
   commit tertaut ke profilnya.

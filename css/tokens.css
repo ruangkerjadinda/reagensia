@@ -1,43 +1,59 @@
 /*
  * Token desain.
  *
- * Netral di sini sengaja condong ke biru dingin, bukan abu-abu hangat, dan
- * kartu memakai putih penuh di atas bidang halaman yang lebih gelap. Versi
- * pertama memakai kartu #fcfcfb di atas bidang #f9f9f7 — beda 1% — sehingga
- * tidak ada satu pun kartu yang terbaca sebagai benda terpisah, dan seluruh
- * halaman menyatu jadi satu bidang datar.
+ * Empat pilihan warna (Sakura/Mint Klinik/Lavender Senja/Peach Sorbet), dipilih
+ * di halaman Pengaturan lewat atribut [data-palette] di <html>, disetel oleh
+ * js/ui/theme.js dan selalu ada nilainya (default 'sakura' — lihat DEFAULTS di
+ * js/config.js). Karena atribut itu tidak pernah kosong, setiap blok warna di
+ * bawah cukup menimpa "biji" warnanya sendiri (plane, surface, ink, muted,
+ * border, accent) — token turunan (plane-tint, grid, axis, bayangan, ink
+ * sekunder, dst.) ditulis SEKALI lewat color-mix() dan otomatis menghitung
+ * ulang memakai biji yang sedang aktif, tanpa perlu ditulis ulang per tema.
+ * Detail ini penting dipahami sebelum menambah tema kelima: tambahkan blok
+ * biji terang + gelap saja, jangan menyalin seluruh berkas.
  *
- * Palet grafik lolos validator data-viz di kedua mode terhadap permukaan baru
- * ini: trio kategorikal instalasi, dua seri biru/merah, dan ramp ordinal.
+ * Bentuknya ("Level 2" di design/theme-preview.html) berlaku sama untuk
+ * keempat warna — sudut 13→20 px, tombol kapsul, bayangan lebih empuk — jadi
+ * radius dan bayangan didefinisikan sekali di :root, bukan per tema.
  *
- * Warna status (kritis/serius/peringatan/aman) tetap sama dan selalu tampil
- * bersama penanda bentuk dan teks, tidak pernah sebagai warna semata.
+ * Warna status (kritis/serius/peringatan/aman) dan palet grafik (series/ramp)
+ * SENGAJA tidak ikut tema — warnanya membawa arti klinis, jadi cuma
+ * didefinisikan di blok dasar (terang) dan blok gelap umum, lalu menurun ke
+ * keempat tema apa adanya.
+ *
+ * PERINGATAN: validator skill dataviz sebelumnya hanya diuji terhadap
+ * permukaan biru lama (#ffffff terang / #15181e gelap). Permukaan gelap
+ * keempat tema sekarang berbeda-beda (merah muda/hijau/ungu/oranye tua), jadi
+ * kontras warna series dan ramp grafik di mode gelap belum divalidasi ulang
+ * terhadap permukaan barunya. Jalankan ulang validatornya sebelum
+ * mengandalkan grafik di mode gelap non-default.
  */
 
 :root {
   color-scheme: light;
 
-  /* Permukaan — jarak antara bidang dan kartu yang membuat kartu terlihat */
-  --plane: #eef0f4;
-  --plane-tint: #e7eaf0;
+  /* Permukaan — Sakura (default). Surface tetap putih di keempat tema
+     terang; yang membedakan hanya plane dan surface-sunken. */
+  --plane: #fdf5f7;
+  --plane-tint: color-mix(in srgb, var(--plane), var(--ink) 4%);
   --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-sunken: #f4f6f9;
-  --surface-hover: rgba(15, 23, 42, 0.04);
-  --surface-active: rgba(15, 23, 42, 0.07);
-  --surface-accent: rgba(42, 120, 214, 0.08);
+  --surface-raised: var(--surface);
+  --surface-sunken: #fbeef2;
+  --surface-hover: color-mix(in srgb, var(--ink) 4%, transparent);
+  --surface-active: color-mix(in srgb, var(--ink) 7%, transparent);
+  --surface-accent: var(--accent-wash);
 
   /* Tinta */
-  --ink: #0f172a;
-  --ink-secondary: #4a5568;
-  --ink-muted: #66748a;
+  --ink: #2e1f26;
+  --ink-secondary: color-mix(in srgb, var(--ink), var(--ink-muted) 65%);
+  --ink-muted: #7d6371;
   --ink-inverse: #ffffff;
 
   /* Garis */
-  --border: rgba(15, 23, 42, 0.09);
-  --border-strong: rgba(15, 23, 42, 0.18);
-  --grid: #e6e9ef;
-  --axis: #c3cad6;
+  --border: rgba(142, 90, 110, 0.16);
+  --border-strong: rgba(142, 90, 110, 0.32);
+  --grid: color-mix(in srgb, var(--surface), var(--ink) 9%);
+  --axis: color-mix(in srgb, var(--surface), var(--ink) 22%);
   --highlight: rgba(255, 255, 255, 0.7);
 
   /* Status — tetap, tidak ikut tema */
@@ -73,18 +89,18 @@
   --ramp-4: #1c5cab;
   --ramp-5: #104281;
 
-  /* Aksen antarmuka */
-  --accent: #2a78d6;
-  --accent-strong: #1c5cab;
+  /* Aksen antarmuka — biji warna tema, ditimpa per tema di bawah */
+  --accent: #de6f97;
+  --accent-strong: #c14f7b;
   --accent-ink: #ffffff;
-  --accent-wash: rgba(42, 120, 214, 0.1);
-  --focus: #2a78d6;
+  --accent-wash: rgba(222, 111, 151, 0.14);
+  --focus: var(--accent);
 
-  /* Bentuk & ritme */
-  --radius-xs: 5px;
-  --radius-sm: 8px;
-  --radius: 13px;
-  --radius-lg: 18px;
+  /* Bentuk & ritme — "Level 2": sudut dan bayangan lebih membulat/empuk */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius: 20px;
+  --radius-lg: 26px;
   --radius-pill: 999px;
 
   --space-1: 4px;
@@ -95,13 +111,13 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Bayangan berlapis; lapisan pertama rapat untuk ketegasan tepi */
-  --shadow-xs: 0 1px 1px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 2px 4px rgba(15, 23, 42, 0.06), 0 20px 48px rgba(15, 23, 42, 0.16);
-  --shadow-accent: 0 1px 2px rgba(28, 92, 171, 0.3), 0 4px 12px rgba(42, 120, 214, 0.25);
+  /* Bayangan berlapis, warnanya ikut tinta supaya tetap netral di tiap tema */
+  --shadow-xs: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+  --shadow-sm: 0 1px 3px color-mix(in srgb, var(--ink) 6%, transparent), 0 2px 5px color-mix(in srgb, var(--ink) 5%, transparent);
+  --shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent), 0 8px 20px color-mix(in srgb, var(--ink) 7%, transparent);
+  --shadow-md: 0 2px 4px color-mix(in srgb, var(--ink) 6%, transparent), 0 14px 32px color-mix(in srgb, var(--ink) 9%, transparent);
+  --shadow-lg: 0 3px 6px color-mix(in srgb, var(--ink) 7%, transparent), 0 26px 56px color-mix(in srgb, var(--ink) 16%, transparent);
+  --shadow-accent: 0 1px 3px color-mix(in srgb, var(--accent-strong) 30%, transparent), 0 6px 16px color-mix(in srgb, var(--accent) 26%, transparent);
 
   --font: ui-sans-serif, system-ui, 'Segoe UI Variable Text', 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-display: ui-sans-serif, system-ui, 'Segoe UI Variable Display', 'Segoe UI', Inter, Roboto, sans-serif;
@@ -111,29 +127,73 @@
   --topbar-h: 62px;
 }
 
-/* Mode gelap dari preferensi sistem — dilewati kalau pengguna memilih terang. */
+/* Biji warna terang untuk tiga tema lain. Hanya properti yang benar-benar
+   beda per tema yang ditulis di sini — sisanya (plane-tint, grid, axis, ink
+   sekunder, dst.) menurun dari :root dan menghitung ulang sendiri. */
+:root[data-palette='mint'] {
+  --plane: #eff7f3;
+  --surface-sunken: #e6f3ed;
+  --ink: #12251f;
+  --ink-muted: #5f7a72;
+  --border: rgba(30, 90, 74, 0.15);
+  --border-strong: rgba(30, 90, 74, 0.3);
+  --accent: #2aa385;
+  --accent-strong: #178066;
+  --accent-wash: rgba(42, 163, 133, 0.14);
+}
+:root[data-palette='lavender'] {
+  --plane: #f5f3fd;
+  --surface-sunken: #efebfb;
+  --ink: #211d33;
+  --ink-muted: #6d6890;
+  --border: rgba(90, 80, 160, 0.16);
+  --border-strong: rgba(90, 80, 160, 0.32);
+  --accent: #7a67d9;
+  --accent-strong: #5f4ac0;
+  --accent-wash: rgba(122, 103, 217, 0.13);
+}
+:root[data-palette='peach'] {
+  --plane: #fff5ee;
+  --surface-sunken: #ffece0;
+  --ink: #33211a;
+  --ink-muted: #85685a;
+  --border: rgba(160, 90, 50, 0.16);
+  --border-strong: rgba(160, 90, 50, 0.32);
+  --accent: #ef7746;
+  --accent-strong: #bd4a1d;
+  --accent-wash: rgba(239, 119, 70, 0.14);
+}
+
+/* Mode gelap dari preferensi sistem — dilewati kalau pengguna memilih terang.
+   Blok umum ini membawa Sakura (default) DAN seluruh turunan yang rumusnya
+   beda dari mode terang (plane-tint, surface-raised, grid, axis, ink-inverse,
+   accent-ink, focus, bayangan). Ketiga tema lain di bawahnya cuma menimpa
+   biji warnanya sendiri — [data-palette='mint'] lebih spesifik daripada
+   :not([data-theme='light']) sehingga selalu menang tanpa peduli urutan. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    --plane: #0a0c10;
-    --plane-tint: #0d1015;
-    --surface: #15181e;
-    --surface-raised: #1b1f27;
-    --surface-sunken: #101319;
+    --plane: #161014;
+    --surface: #1f171d;
+    --surface-sunken: #191219;
+    --ink: #f7eef2;
+    --ink-muted: #ab8f9c;
+    --border: rgba(255, 214, 229, 0.13);
+    --border-strong: rgba(255, 214, 229, 0.26);
+    --accent: #ef8fb2;
+    --accent-strong: #f7b3cb;
+    --accent-wash: rgba(239, 143, 178, 0.17);
+
+    --plane-tint: color-mix(in srgb, var(--plane), white 3%);
+    --surface-raised: color-mix(in srgb, var(--surface), white 6%);
     --surface-hover: rgba(255, 255, 255, 0.05);
     --surface-active: rgba(255, 255, 255, 0.09);
-    --surface-accent: rgba(57, 135, 229, 0.14);
-
-    --ink: #f2f5f9;
-    --ink-secondary: #a8b3c4;
-    --ink-muted: #7b8a9f;
-    --ink-inverse: #0a0c10;
-
-    --border: rgba(255, 255, 255, 0.09);
-    --border-strong: rgba(255, 255, 255, 0.2);
-    --grid: #232833;
-    --axis: #333b49;
+    --ink-inverse: var(--plane);
+    --accent-ink: var(--plane);
+    --focus: var(--accent-strong);
+    --grid: color-mix(in srgb, var(--surface), white 8%);
+    --axis: color-mix(in srgb, var(--surface), white 16%);
     --highlight: rgba(255, 255, 255, 0.06);
 
     --critical-wash: rgba(208, 59, 59, 0.18);
@@ -160,43 +220,77 @@
     --ramp-4: #3987e5;
     --ramp-5: #184f95;
 
-    --accent: #3987e5;
-    --accent-strong: #6da7ec;
-    --accent-ink: #06090f;
-    --accent-wash: rgba(57, 135, 229, 0.16);
-    --focus: #6da7ec;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.38);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.32);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 22px rgba(0, 0, 0, 0.36);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45), 0 16px 36px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 3px 6px rgba(0, 0, 0, 0.45), 0 28px 60px rgba(0, 0, 0, 0.52);
+    --shadow-accent: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
 
-    --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 48px rgba(0, 0, 0, 0.6);
-    --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(57, 135, 229, 0.3);
+  :root[data-palette='mint']:not([data-theme='light']) {
+    --plane: #0a1411;
+    --surface: #121e1a;
+    --surface-sunken: #0e1815;
+    --ink: #e9f6f1;
+    --ink-muted: #7fa398;
+    --border: rgba(180, 240, 220, 0.12);
+    --border-strong: rgba(180, 240, 220, 0.24);
+    --accent: #3fc39f;
+    --accent-strong: #6ed9bd;
+    --accent-wash: rgba(63, 195, 159, 0.16);
+  }
+  :root[data-palette='lavender']:not([data-theme='light']) {
+    --plane: #0f0e18;
+    --surface: #17162a;
+    --surface-sunken: #121124;
+    --ink: #efecfd;
+    --ink-muted: #9791c4;
+    --border: rgba(200, 190, 255, 0.13);
+    --border-strong: rgba(200, 190, 255, 0.26);
+    --accent: #9b8bf0;
+    --accent-strong: #b9adf7;
+    --accent-wash: rgba(155, 139, 240, 0.17);
+  }
+  :root[data-palette='peach']:not([data-theme='light']) {
+    --plane: #17100c;
+    --surface: #211711;
+    --surface-sunken: #1b120e;
+    --ink: #fbeee6;
+    --ink-muted: #b2907c;
+    --border: rgba(255, 210, 180, 0.13);
+    --border-strong: rgba(255, 210, 180, 0.26);
+    --accent: #f78d5f;
+    --accent-strong: #ffab84;
+    --accent-wash: rgba(247, 141, 95, 0.17);
   }
 }
 
-/* Pilihan eksplisit pengguna harus menang di kedua arah. */
+/* Pilihan eksplisit pengguna harus menang di kedua arah — sama seperti blok
+   media di atas, hanya tanpa syarat preferensi sistem. */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --plane: #0a0c10;
-  --plane-tint: #0d1015;
-  --surface: #15181e;
-  --surface-raised: #1b1f27;
-  --surface-sunken: #101319;
+  --plane: #161014;
+  --surface: #1f171d;
+  --surface-sunken: #191219;
+  --ink: #f7eef2;
+  --ink-muted: #ab8f9c;
+  --border: rgba(255, 214, 229, 0.13);
+  --border-strong: rgba(255, 214, 229, 0.26);
+  --accent: #ef8fb2;
+  --accent-strong: #f7b3cb;
+  --accent-wash: rgba(239, 143, 178, 0.17);
+
+  --plane-tint: color-mix(in srgb, var(--plane), white 3%);
+  --surface-raised: color-mix(in srgb, var(--surface), white 6%);
   --surface-hover: rgba(255, 255, 255, 0.05);
   --surface-active: rgba(255, 255, 255, 0.09);
-  --surface-accent: rgba(57, 135, 229, 0.14);
-
-  --ink: #f2f5f9;
-  --ink-secondary: #a8b3c4;
-  --ink-muted: #7b8a9f;
-  --ink-inverse: #0a0c10;
-
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --grid: #232833;
-  --axis: #333b49;
+  --ink-inverse: var(--plane);
+  --accent-ink: var(--plane);
+  --focus: var(--accent-strong);
+  --grid: color-mix(in srgb, var(--surface), white 8%);
+  --axis: color-mix(in srgb, var(--surface), white 16%);
   --highlight: rgba(255, 255, 255, 0.06);
 
   --critical-wash: rgba(208, 59, 59, 0.18);
@@ -223,16 +317,47 @@
   --ramp-4: #3987e5;
   --ramp-5: #184f95;
 
-  --accent: #3987e5;
-  --accent-strong: #6da7ec;
-  --accent-ink: #06090f;
-  --accent-wash: rgba(57, 135, 229, 0.16);
-  --focus: #6da7ec;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.38);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.32);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 22px rgba(0, 0, 0, 0.36);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.45), 0 16px 36px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 3px 6px rgba(0, 0, 0, 0.45), 0 28px 60px rgba(0, 0, 0, 0.52);
+  --shadow-accent: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+}
 
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.5), 0 20px 48px rgba(0, 0, 0, 0.6);
-  --shadow-accent: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 14px rgba(57, 135, 229, 0.3);
+:root[data-palette='mint'][data-theme='dark'] {
+  --plane: #0a1411;
+  --surface: #121e1a;
+  --surface-sunken: #0e1815;
+  --ink: #e9f6f1;
+  --ink-muted: #7fa398;
+  --border: rgba(180, 240, 220, 0.12);
+  --border-strong: rgba(180, 240, 220, 0.24);
+  --accent: #3fc39f;
+  --accent-strong: #6ed9bd;
+  --accent-wash: rgba(63, 195, 159, 0.16);
+}
+:root[data-palette='lavender'][data-theme='dark'] {
+  --plane: #0f0e18;
+  --surface: #17162a;
+  --surface-sunken: #121124;
+  --ink: #efecfd;
+  --ink-muted: #9791c4;
+  --border: rgba(200, 190, 255, 0.13);
+  --border-strong: rgba(200, 190, 255, 0.26);
+  --accent: #9b8bf0;
+  --accent-strong: #b9adf7;
+  --accent-wash: rgba(155, 139, 240, 0.17);
+}
+:root[data-palette='peach'][data-theme='dark'] {
+  --plane: #17100c;
+  --surface: #211711;
+  --surface-sunken: #1b120e;
+  --ink: #fbeee6;
+  --ink-muted: #b2907c;
+  --border: rgba(255, 210, 180, 0.13);
+  --border-strong: rgba(255, 210, 180, 0.26);
+  --accent: #f78d5f;
+  --accent-strong: #ffab84;
+  --accent-wash: rgba(247, 141, 95, 0.17);
 }

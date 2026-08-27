@@ -156,6 +156,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .section-head h3 { font-family: var(--font-display); font-size: 15px; letter-spacing: -0.015em; }
 .section-head p { font-size: 12.5px; color: var(--ink-muted); }
 
+/* Maskot: hanya di halaman Dashboard (lihat js/pages/dashboard.js), tidak
+   pernah di halaman lain — .no-print menyembunyikannya juga di cetak. */
+.mascot-row { display: flex; align-items: center; gap: var(--space-3); }
+.mascot-badge {
+  flex: none; width: 56px; height: 56px; display: grid; place-items: center;
+  border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.mascot-greet { font-family: var(--font-display); font-size: 16px; font-weight: 650; letter-spacing: -0.015em; }
+
 /* ---------------------------------------------------------------- kartu */
 
 .card {
@@ -339,6 +349,23 @@ a.btn { text-decoration: none; }
 .switch input:checked + .switch-track::after { transform: translateX(15px); background: #fff; }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }
 .switch input:disabled + .switch-track { opacity: 0.5; }
+
+/* Swatch tiap tombol ditulis warna literal di JS, bukan var(--accent) — tiap
+   opsi harus tetap menampilkan warna aslinya sendiri, terlepas dari tema yang
+   sedang aktif. */
+.palette-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+.palette-opt {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; text-align: left; color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 550;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.palette-opt:hover { border-color: var(--border-strong); }
+.palette-opt[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); font-weight: 650; }
+.palette-swatch { width: 26px; height: 26px; border-radius: var(--radius-sm); flex: none; border: 1px solid var(--border); }
 
 /* ---------------------------------------------------------------- tabel */
 
