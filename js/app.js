@@ -168,9 +168,59 @@ function renderPage() {
     : null;
 
   if (banner) body.prepend(banner);
+
+  const focus = captureFocus();
   mount(main, body);
+  restoreFocus(focus);
+
   main.scrollTop = 0;
   window.scrollTo(0, 0);
+}
+
+/*
+ * Gambar ulang penuh membuang DOM lama — termasuk kolom yang sedang diketik.
+ * Kolom pencarian menunda 220 ms lalu menulis ke URL, jadi gambar ulangnya
+ * jatuh tepat di tengah ketikan: tanpa memulihkan fokus, huruf berikutnya
+ * hilang. Ambang risiko di halaman Pengaturan sama masalahnya.
+ *
+ * Dicocokkan lewat id kalau ada, kalau tidak lewat urutan di antara input
+ * bertipe sama — mencocokkan tipe saja salah sasaran di Pengaturan, yang
+ * punya tiga input number bersebelahan.
+ */
+function captureFocus() {
+  const node = document.activeElement;
+  if (!node || !main.contains(node)) return null;
+  if (!/^(INPUT|TEXTAREA)$/.test(node.tagName)) return null;
+
+  const sameType = [...main.querySelectorAll(`input[type="${node.type}"], textarea`)];
+  const snap = { id: node.id || null, type: node.type, index: sameType.indexOf(node) };
+
+  // selectionStart melempar untuk sebagian tipe (number, email); posisi kursor
+  // memang tidak ada di sana, dan fokusnya saja sudah cukup.
+  try {
+    snap.start = node.selectionStart;
+    snap.end = node.selectionEnd;
+  } catch {
+    snap.start = null;
+  }
+  return snap;
+}
+
+function restoreFocus(snap) {
+  if (!snap) return;
+
+  const next = snap.id
+    ? main.querySelector(`#${CSS.escape(snap.id)}`)
+    : [...main.querySelectorAll(`input[type="${snap.type}"], textarea`)][snap.index];
+  if (!next) return;
+
+  next.focus();
+  if (snap.start == null) return;
+  try {
+    next.setSelectionRange(snap.start, snap.end);
+  } catch {
+    /* tipe ini tidak punya posisi kursor — fokusnya sudah kembali, cukup. */
+  }
 }
 
 /* ------------------------------------------------------------- pintasan */
