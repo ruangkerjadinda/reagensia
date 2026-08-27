@@ -182,9 +182,10 @@ Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 - **Pemilih tema** di halaman Pengaturan. Empat kandidat sudah dipratinjau dan
   disetujui arahannya: Sakura, Mint Klinik, Lavender Senja, Peach Sorbet —
   masing-masing terang dan gelap, pada "Level 2" (warna **dan** bentuk lebih
-  membulat: sudut 13→20 px, tombol kapsul, bayangan lebih empuk). Palet
-  lengkapnya ada di artefak pratinjau; kalau hilang, susun ulang lalu jalankan
-  validator `dataviz`.
+  membulat: sudut 13→20 px, tombol kapsul, bayangan lebih empuk).
+  **Palet lengkap keempatnya ada di `design/theme-preview.html`** — berkas itu
+  halaman mandiri yang dipakai memilih, dan nilai heksanya bisa diangkat
+  langsung dari sana ke `css/tokens.css`.
 - **Maskot kecil di halaman Dashboard.** Disetujui, dengan batas: SVG inline
   memakai token warna supaya ikut berganti tema, hanya di Dashboard, tidak
   pernah muncul di Audit, Alert, tabel, atau apa pun yang dicetak.
