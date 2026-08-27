@@ -10,7 +10,7 @@ import { APP, CONFIG, canWrite } from './config.js';
 import { store, subscribe, load, lastSyncLabel } from './data/store.js';
 import { el, mount, chip, btn, fmtNum, notice } from './ui/dom.js';
 import { register, start, onNavigate, router, go, allRoutes } from './ui/router.js';
-import { applyTheme, syncMetaThemeColor } from './ui/theme.js';
+import { applyTheme, applyPalette, syncMetaThemeColor } from './ui/theme.js';
 import { openPalette } from './ui/palette.js';
 import { icon } from './ui/icons.js';
 import { closeOverlay } from './ui/overlay.js';
@@ -207,6 +207,7 @@ syncBtn.addEventListener('click', () => load({ force: true }));
 /* ---------------------------------------------------------------- mulai */
 
 applyTheme(CONFIG.theme);
+applyPalette(CONFIG.palette);
 subscribe(renderPage);
 onNavigate(() => {
   closeOverlay();

@@ -6,6 +6,11 @@ export function applyTheme(theme) {
   else delete root.dataset.theme;
 }
 
+/** Palet warna (Sakura/Mint Klinik/Lavender Senja/Peach Sorbet), independen dari mode terang/gelap. */
+export function applyPalette(palette) {
+  document.documentElement.dataset.palette = palette;
+}
+
 /** Warna bilah alamat di peramban seluler mengikuti permukaan halaman. */
 export function syncMetaThemeColor() {
   const meta = document.querySelector('meta[name="theme-color"]');

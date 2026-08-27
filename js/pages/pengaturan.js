@@ -3,13 +3,23 @@ import { CONFIG, saveSettings, resetSettings, canWrite, APP } from '../config.js
 import { store, clearCache, load, recompute, lastSyncLabel } from '../data/store.js';
 import { ping, repairSisa } from '../data/writer.js';
 import { toast, confirmAction, diffBlock, diffRow } from '../ui/overlay.js';
-import { applyTheme } from '../ui/theme.js';
+import { applyTheme, applyPalette } from '../ui/theme.js';
 
 export const meta = {
   title: 'Pengaturan',
   subtitle: 'Sumber data, mode input, ambang risiko, tampilan',
   icon: 'pengaturan',
 };
+
+/** Pratinjau warnanya sengaja ditulis literal, bukan lewat var(--accent) —
+ * tombol pilihan harus menampilkan warna aslinya sendiri-sendiri, bukan warna
+ * tema yang sedang aktif. */
+const PALETTES = [
+  { id: 'sakura', label: 'Sakura', accent: '#de6f97', accent2: '#c14f7b' },
+  { id: 'mint', label: 'Mint Klinik', accent: '#2aa385', accent2: '#178066' },
+  { id: 'lavender', label: 'Lavender Senja', accent: '#7a67d9', accent2: '#5f4ac0' },
+  { id: 'peach', label: 'Peach Sorbet', accent: '#ef7746', accent2: '#bd4a1d' },
+];
 
 export function render({ data, summary, rerender }) {
   const page = el('div.page');
@@ -93,6 +103,22 @@ export function render({ data, summary, rerender }) {
       },
     })))));
 
+  /* ---------------------------------------------------- warna tema */
+
+  page.append(el('section.card', {},
+    cardHead('Warna tema', 'Berlaku di mode terang maupun gelap'),
+    el('div.palette-picker', {}, ...PALETTES.map(({ id, label, accent, accent2 }) => el('button.palette-opt', {
+      type: 'button',
+      'aria-pressed': String(CONFIG.palette === id),
+      onclick: () => {
+        saveSettings({ palette: id });
+        applyPalette(id);
+        rerender();
+      },
+    },
+      el('span.palette-swatch', { style: { background: `linear-gradient(145deg, ${accent}, ${accent2})` } }),
+      el('span', { text: label }))))));
+
   /* ---------------------------------------------------------- tentang */
 
   page.append(el('section.card', {},
@@ -111,6 +137,7 @@ export function render({ data, summary, rerender }) {
           if (!ok) return;
           resetSettings();
           applyTheme(CONFIG.theme);
+          applyPalette(CONFIG.palette);
           recompute();
           rerender();
           toast('Pengaturan dikembalikan ke awal', { tone: 'ok' });
