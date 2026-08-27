@@ -56,8 +56,18 @@ export function go(name, params = {}, { replace = false } = {}) {
     handle();
     return;
   }
-  if (replace) history.replaceState(null, '', hash);
-  else location.hash = hash;
+  if (replace) {
+    // history.replaceState() mengubah URL tanpa memicu 'hashchange' — itu
+    // memang perilaku bakunya, bukan bug peramban. Jadi handle() harus
+    // dipanggil sendiri; tanpa ini setiap perubahan filter (yang semuanya
+    // lewat setParams, dan setParams defaultnya replace) hanya menulis URL
+    // dan tidak pernah menggambar ulang halaman — tabelnya baru betul
+    // setelah pengguna memuat ulang.
+    history.replaceState(null, '', hash);
+    handle();
+  } else {
+    location.hash = hash;
+  }
 }
 
 /** Ubah sebagian parameter tanpa menambah entri riwayat — untuk filter. */
