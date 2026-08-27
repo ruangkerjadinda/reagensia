@@ -7,7 +7,7 @@
  * terakhir, bukan pekerja layanan ini.
  */
 
-const CACHE = 'reagensia-v2';
+const CACHE = 'reagensia-v3';
 const SHELL = [
   './',
   'index.html',
@@ -19,7 +19,11 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // 'reload' supaya cache HTTP milik peramban tidak ikut menjawab — sama
+  // alasannya dengan { cache: 'no-store' } di fetch handler di bawah, tapi
+  // Cache API menolak menyimpan permintaan bermode 'no-store'.
+  const fresh = SHELL.map((url) => new Request(url, { cache: 'reload' }));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -45,8 +49,15 @@ self.addEventListener('fetch', (event) => {
   // kunjungan kedua setelah pemasangan — pengguna melihat kode lama sekali,
   // tanpa tahu. Untuk dashboard yang angkanya dipakai mengambil keputusan,
   // ketertinggalan diam-diam itu lebih mahal daripada muat sedetik lebih lambat.
+  //
+  // `{ cache: 'no-store' }` di sini bukan hiasan — GitHub Pages mengirim
+  // Cache-Control: max-age=600 di setiap berkas. Tanpa opsi ini, fetch()
+  // "jaringan dulu" ini tetap bisa dijawab diam-diam oleh cache HTTP milik
+  // peramban (bukan cache pekerja layanan ini), dan muat ulang paksa
+  // (Ctrl+Shift+R) TIDAK menjamin permintaan yang lewat pekerja layanan ikut
+  // memaksa — jadi kode sampai 10 menit lebih lama bisa tetap muncul.
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: 'no-store' })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
