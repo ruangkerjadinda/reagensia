@@ -157,7 +157,7 @@ function card(lot, data) {
         })),
 
     data.cards.length
-      ? el('section.card.card--flush', {},
+      ? el('section.card.card--flush.no-print', {},
         cardHead('Isi tab "Kartu Stok" di spreadsheet', `${fmtNum(data.cards.length)} baris — tab ini tersembunyi dan sebagian rumusnya rusak`),
         dataTable({
           csvName: 'kartu-stok-asli',
