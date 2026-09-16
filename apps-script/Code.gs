@@ -298,11 +298,18 @@ function bumpMaster(ctx, row, field, delta, actor) {
   var col = ctx.cols[field];
   if (!col) throw fail('NOT_FOUND', 'Kolom "' + field + '" tidak ada di Master Stok.');
 
-  var before = num(ctx.sheet.getRange(row, col).getValue());
+  var sel = ctx.sheet.getRange(row, col);
+  var before = num(sel.getValue());
   var sisaBefore = num(ctx.sheet.getRange(row, ctx.cols.sisaStok).getValue());
   var after = before + delta;
 
-  ctx.sheet.getRange(row, col).setValue(after);
+  // Kalau kolom ini sudah berisi SUMIFS ke tab transaksi (dipasang lewat
+  // Formulas.gs), baris transaksinya sudah ditulis sebelum fungsi ini dipanggil
+  // dan rumusnya sudah ikut menghitung. Menimpanya dengan angka statis bukan
+  // cuma menggandakan hitungan sekali — otomatisasi baris itu mati untuk
+  // seterusnya, tanpa ada yang kelihatan salah.
+  var pakaiRumus = String(sel.getFormula() || '') !== '';
+  if (!pakaiRumus) sel.setValue(after);
 
   // Rumus dibangun dari posisi kolom yang benar-benar ditemukan, bukan huruf
   // yang dihafal — supaya tetap benar kalau ada kolom disisipkan.
@@ -317,6 +324,7 @@ function bumpMaster(ctx, row, field, delta, actor) {
 
   SpreadsheetApp.flush();
   var sisaAfter = num(ctx.sheet.getRange(row, ctx.cols.sisaStok).getValue());
+  if (pakaiRumus) after = num(sel.getValue());
 
   return {
     row: row,
@@ -429,7 +437,12 @@ function createMasterRow(ctx, p, qty) {
   values[ctx.cols.merk] = p.merk || '';
   values[ctx.cols.kategori] = p.kategori || '';
   values[ctx.cols.supplier] = p.supplier || '';
-  values[ctx.cols.stokAwal] = qty;
+  // Kalau Master Stok sudah memakai rumus, saldo pembuka lot baru adalah 0 dan
+  // qty-nya masuk lewat SUMIFS ke baris Penerimaan yang barusan ditulis —
+  // menaruhnya di Stok Awal juga akan menghitungnya dua kali.
+  var barisRumus = barisRumusMaster_(ctx);
+
+  values[ctx.cols.stokAwal] = barisRumus ? 0 : qty;
   values[ctx.cols.pembelian] = 0;
   values[ctx.cols.distribusi] = 0;
   values[ctx.cols.pemusnahan] = 0;
@@ -442,23 +455,58 @@ function createMasterRow(ctx, p, qty) {
 
   writeRow(ctx.sheet, row, values);
 
-  var formula = '='
-    + colLetter(ctx.cols.stokAwal) + row + '+'
-    + colLetter(ctx.cols.pembelian) + row + '-'
-    + colLetter(ctx.cols.distribusi) + row + '-'
-    + colLetter(ctx.cols.pemusnahan) + row;
-  ctx.sheet.getRange(row, ctx.cols.sisaStok).setFormula(formula);
+  if (barisRumus) {
+    // Disalin dari baris yang sudah benar, bukan disusun ulang di sini —
+    // rujukan relatifnya ikut menyesuaikan sendiri, dan cuma ada satu tempat
+    // yang menentukan bentuk rumusnya (Formulas.gs).
+    salinRumusMaster_(ctx, barisRumus, row);
+  } else {
+    var formula = '='
+      + colLetter(ctx.cols.stokAwal) + row + '+'
+      + colLetter(ctx.cols.pembelian) + row + '-'
+      + colLetter(ctx.cols.distribusi) + row + '-'
+      + colLetter(ctx.cols.pemusnahan) + row;
+    ctx.sheet.getRange(row, ctx.cols.sisaStok).setFormula(formula);
+  }
   SpreadsheetApp.flush();
 
   return {
     row: row,
     created: true,
-    field: 'stokAwal',
+    field: barisRumus ? 'pembelian' : 'stokAwal',
     before: 0,
     after: qty,
     sisaBefore: 0,
     sisaAfter: num(ctx.sheet.getRange(row, ctx.cols.sisaStok).getValue()),
   };
+}
+
+/**
+ * Baris data Master Stok yang kolom Pembelian-nya sudah berupa rumus, atau 0
+ * kalau belum ada sama sekali. Dipakai untuk mengetahui apakah workbook ini
+ * sudah dikonversi lewat Formulas.gs, sekaligus sebagai contoh yang disalin
+ * untuk baris baru.
+ */
+function barisRumusMaster_(ctx) {
+  var last = ctx.sheet.getLastRow();
+  if (last <= ctx.headerRow) return 0;
+
+  var awal = ctx.headerRow + 1;
+  var jumlah = last - ctx.headerRow;
+  var rumus = ctx.sheet.getRange(awal, ctx.cols.pembelian, jumlah, 1).getFormulas();
+  for (var i = 0; i < rumus.length; i++) {
+    if (String(rumus[i][0] || '') !== '') return awal + i;
+  }
+  return 0;
+}
+
+/** Salin rumus kolom ringkasan dari satu baris Master Stok ke baris lain. */
+function salinRumusMaster_(ctx, dariBaris, keBaris) {
+  var kolom = [ctx.cols.pembelian, ctx.cols.distribusi, ctx.cols.pemusnahan, ctx.cols.sisaStok];
+  for (var i = 0; i < kolom.length; i++) {
+    ctx.sheet.getRange(dariBaris, kolom[i])
+      .copyTo(ctx.sheet.getRange(keBaris, kolom[i]), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+  }
 }
 
 /* ---------------------------------------------- distribusi & pemusnahan */

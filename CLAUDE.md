@@ -42,6 +42,20 @@ Temuan berikut hasil pemeriksaan langsung. Jangan disimpulkan ulang dari nol.
    transaksi saja membuat angka Master Stok melenceng. Setiap penulisan harus
    sepasang — baris transaksi **dan** kolom ringkasannya, dalam satu kunci.
 
+   **`apps-script/Formulas.gs` mengubah ini** (lihat `apps-script/RUMUS.md`) —
+   ketiganya jadi `SUMIFS` ke tab transaksi. Per 16 Sep 2026 sudah diperiksa
+   aman dipasang: 203 lot, tidak ada kunci `kode|lot` ganda, tidak ada selisih
+   per lot di ketiga tab, dan pencocokan ala SUMIFS (mentah) memberi hasil yang
+   sama persis dengan pencocokan dashboard (dinormalkan) — 0 beda, 0 baris
+   yatim, tidak ada karakter wildcard di Kode/Lot. **Belum dijalankan di
+   workbook aslinya**; itu keputusan pemilik spreadsheet.
+
+   Kalau sudah dipasang, anggapan "tulis sepasang" di atas **tidak berlaku
+   lagi** — cukup baris transaksinya. `Code.gs` sudah menyesuaikan diri:
+   `bumpMaster()` melewati kolom yang berisi rumus (kalau ditimpa, hitungannya
+   dobel karena baris transaksi ditulis lebih dulu, **dan** rumusnya hilang),
+   dan lot baru menyalin rumus dari baris yang sudah benar.
+
 3. **Sisa Stok seharusnya rumus** `=Stok Awal + Pembelian − Distribusi −
    Pemusnahan`. Di 13 baris rumusnya diganti angka ketikan; 7 di antaranya
    sekarang tidak cocok. Baris 173 (`IMB-0077`) menaruh 240 di Stok Awal *dan*
@@ -67,6 +81,30 @@ Temuan berikut hasil pemeriksaan langsung. Jangan disimpulkan ulang dari nol.
 8. **Tab Kartu Stok tersembunyi dan rumusnya rusak** — `XLOOKUP` menunjuk sheet
    `Master Reagen` yang tidak ada. Halaman Kartu Stok membangun ulang kartunya
    dari tab transaksi, bukan membaca tab itu.
+
+## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
+
+Pertanyaan yang berulang dari Dinda. Jawabannya berbeda-beda per kasus:
+
+- **Dipindah (urutannya ditukar): aman.** `resolveColumns()` mencocokkan lewat
+  label dulu, posisi cuma cadangan — jadi kolom boleh pindah ke mana saja
+  asal **tulisan judulnya tidak ikut berubah**. Ini juga berlaku untuk kolom A:
+  gviz menempelkan banner ke label kolom pertama, dan pencocokannya memakai
+  `endsWith`, jadi kolom apa pun yang dipindah ke A tetap ketemu.
+- **Diganti nama: rusak diam-diam.** Label tidak cocok lagi → jatuh ke posisi
+  yang dideklarasikan di `schema.js`. Perbaikannya sepele: tambahkan nama
+  barunya ke `aliases` field itu. Untuk mode input, `colOf()` di `Code.gs`
+  memakai kesamaan persis (bukan `endsWith`) dan kolom wajib akan **melempar
+  error** — ini justru bagus, gagalnya berisik.
+- **Dihapus: paling berbahaya.** Label hilang → jatuh ke posisi lama →
+  padahal kolom setelahnya sudah bergeser, jadi yang terbaca adalah **kolom
+  tetangganya**, bukan error. Angkanya salah tanpa ada yang merah. Satu-satunya
+  tanda adalah baris peringatan di halaman Pengaturan ("dicocokkan lewat
+  posisi"). Kalau ada kolom yang benar-benar mau dihapus, hapus juga field-nya
+  dari `schema.js` dalam perubahan yang sama.
+
+Kolom **baru** yang disisipkan di tengah tidak merusak apa pun — itu memang
+alasan pencocokan label didahulukan.
 
 ## Angka acuan (27 Agu 2026)
 

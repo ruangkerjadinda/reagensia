@@ -162,3 +162,14 @@ ringkasan. Koreksi dan pembatalan tetap dilakukan manual di Google Sheets.
 Matikan sakelar **Nyalakan mode input** di halaman Pengaturan — dashboard
 kembali sepenuhnya baca-saja. Untuk menutup endpoint sama sekali:
 **Deploy → Manage deployments → Archive**.
+
+---
+
+## Rumus otomatis di Master Stok
+
+Kalau yang dicari cuma "isi tab transaksi, Master Stok ikut sendiri", itu
+**tidak butuh berkas ini sama sekali**. Lihat `RUMUS.md` dan `Formulas.gs` —
+berdiri sendiri, tanpa deploy, tanpa token.
+
+Keduanya bisa dipakai bersama: `Code.gs` mendeteksi kolom yang sudah berupa
+rumus dan tidak menimpanya.
