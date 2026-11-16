@@ -50,6 +50,54 @@
   .print-sign .rule { margin-top: 42pt; border-top: 0.5pt solid #000; padding-top: 3pt; }
 
   a[href]::after { content: ''; }
+
+  /* ------------------------------------------------- kartu stok, versi kertas
+   *
+   * Dicetak untuk ditempel di lemari pendingin, jadi bentuknya mengikuti kartu
+   * manual yang sudah dipakai di lab: blok identitas berkotak di atas, tabel
+   * mutasi berkolom paraf di bawah, semuanya satu lembar A4. Ukuran huruf dan
+   * tinggi baris di sini dipilih supaya satu kartu dengan 14 baris mutasi
+   * selesai dalam satu halaman — jangan dibesarkan tanpa menghitung ulang.
+   */
+  .kartu-cetak { display: block !important; break-inside: avoid; }
+
+  .kartu-cetak-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10pt; border-bottom: 1.5pt solid #000; padding-bottom: 4pt; margin-bottom: 7pt;
+  }
+  .kartu-cetak-head h1 { font-size: 13pt; letter-spacing: 0.06em; margin: 0; }
+  .kartu-cetak-cap { font-size: 8pt; color: #444; white-space: nowrap; }
+
+  .kartu-cetak-id { width: 100%; border-collapse: collapse; margin-bottom: 9pt; }
+  .kartu-cetak-id th,
+  .kartu-cetak-id td {
+    border: 0.5pt solid #999; padding: 2.5pt 5pt;
+    font-size: 8.5pt; text-align: left; vertical-align: top;
+  }
+  .kartu-cetak-id th { width: 15%; font-weight: 600; background: #f2f2f2 !important; }
+  .kartu-cetak-id td { width: 35%; }
+
+  .kartu-cetak-mutasi { width: 100%; border-collapse: collapse; }
+  .kartu-cetak-mutasi th,
+  .kartu-cetak-mutasi td {
+    border: 0.5pt solid #888; padding: 3pt 5pt; font-size: 8.5pt; text-align: left;
+  }
+  .kartu-cetak-mutasi thead th {
+    background: #ececec !important; font-weight: 600; border-bottom: 1pt solid #000;
+  }
+  .kartu-cetak-mutasi .num { text-align: right; }
+  .kartu-cetak-mutasi th:nth-child(1), .kartu-cetak-mutasi td:nth-child(1) { width: 14%; white-space: nowrap; }
+  .kartu-cetak-mutasi th:nth-child(2), .kartu-cetak-mutasi td:nth-child(2) { width: 36%; }
+  .kartu-cetak-mutasi th:nth-child(3), .kartu-cetak-mutasi td:nth-child(3),
+  .kartu-cetak-mutasi th:nth-child(4), .kartu-cetak-mutasi td:nth-child(4),
+  .kartu-cetak-mutasi th:nth-child(5), .kartu-cetak-mutasi td:nth-child(5) { width: 11%; }
+  .kartu-cetak-mutasi th:nth-child(6), .kartu-cetak-mutasi td:nth-child(6) { width: 17%; }
+  .kartu-cetak-mutasi tr.kosong td { height: 13pt; }
+
+  .kartu-cetak-kaki {
+    display: flex; justify-content: space-between; gap: 10pt;
+    margin-top: 6pt; font-size: 8pt; color: #333;
+  }
 }
 
 .print-only { display: none; }

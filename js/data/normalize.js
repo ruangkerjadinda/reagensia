@@ -39,10 +39,40 @@ export function daysBetween(from, to) {
   return Math.round((startOfDay(to) - startOfDay(from)) / DAY_MS);
 }
 
+const norm = (s) => String(s ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
+
 /** Kunci gabungan Kode + Lot, dipakai untuk menyambung antar tab. */
 export function lotKey(kode, lot) {
-  const norm = (s) => String(s ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
   return `${norm(kode)}|${norm(lot)}`;
+}
+
+/**
+ * Tab Pemusnahan tidak punya kolom Kode sama sekali, jadi barisnya tidak bisa
+ * langsung dikunci ke Master Stok. Kodenya dicari lewat Nama Reagen + Kode/Lot
+ * — pasangan itu unik di Master Stok untuk seluruh baris pemusnahan yang ada —
+ * dan kalau namanya meleset, lot sendirian dipakai sebagai cadangan, tapi hanya
+ * kalau lot itu cuma dimiliki satu kode (ada 14 nomor lot yang dipakai lebih
+ * dari satu reagen; menebak di situ akan memindahkan transaksi ke lot lain).
+ */
+function kodeResolver(masterRows) {
+  const byNamaLot = new Map();
+  const byLot = new Map();
+
+  for (const r of masterRows) {
+    if (!r.kode) continue;
+    const nl = `${norm(r.nama)}|${norm(r.lot)}`;
+    if (!byNamaLot.has(nl)) byNamaLot.set(nl, r.kode);
+
+    const l = norm(r.lot);
+    if (!byLot.has(l)) byLot.set(l, r.kode);
+    else if (byLot.get(l) !== r.kode) byLot.set(l, null); // ambigu — jangan tebak
+  }
+
+  return (row) => {
+    if (row.kode) return { kode: row.kode, resolved: false };
+    const hit = byNamaLot.get(`${norm(row.nama)}|${norm(row.lot)}`) || byLot.get(norm(row.lot)) || '';
+    return { kode: hit, resolved: Boolean(hit) };
+  };
 }
 
 function bucketFor(expDate, today, thresholds) {
@@ -69,25 +99,31 @@ export function normalize(tables, options = {}) {
   const today = startOfDay(options.today || new Date());
   const thresholds = options.thresholds || CONFIG.thresholds;
 
-  const receipts = (tables.penerimaan || []).filter(hasIdentity).map((r) => ({
-    ...r,
-    key: lotKey(r.kode, r.lot),
-    qty: num(r.qty),
+  const masterRows = (tables.master || []).filter(hasIdentity);
+  const resolveKode = kodeResolver(masterRows);
+
+  /** Lengkapi kode yang tidak ada di tabnya, lalu kunci barisnya ke lot. */
+  const withKey = (rows, extra) => (rows || []).filter(hasIdentity).map((r) => {
+    const { kode, resolved } = resolveKode(r);
+    return {
+      ...r,
+      kode,
+      kodeDariMaster: resolved,
+      key: lotKey(kode, r.lot),
+      qty: num(r.qty),
+      ...(extra ? extra(r) : null),
+    };
+  });
+
+  const receipts = withKey(tables.penerimaan, (r) => ({
     hasCoa: isLink(r.linkCoa),
     hasMsds: isLink(r.linkMsds),
+    kodeBmn: r.kodeBmn == null || r.kodeBmn === '' ? '' : String(r.kodeBmn).trim(),
   }));
 
-  const issues = (tables.distribusi || []).filter(hasIdentity).map((r) => ({
-    ...r,
-    key: lotKey(r.kode, r.lot),
-    qty: num(r.qty),
-  }));
+  const issues = withKey(tables.distribusi);
 
-  const disposals = (tables.pemusnahan || []).filter(hasIdentity).map((r) => ({
-    ...r,
-    key: lotKey(r.kode, r.lot),
-    qty: num(r.qty),
-  }));
+  const disposals = withKey(tables.pemusnahan);
 
   const cards = (tables.kartuStok || []).filter((r) => r.nama || r.instalasi).map((r) => ({
     ...r,
@@ -99,33 +135,60 @@ export function normalize(tables, options = {}) {
 
   // Dokumen dicatat per lot: satu lot dianggap lengkap kalau ada satu baris
   // penerimaan yang membawa tautannya.
-  const docsByKey = new Map();
+  //
+  // Tab Penerimaan juga jadi sumber beberapa field yang sudah tidak ada lagi di
+  // Master Stok — Kategori — dan beberapa yang memang tidak pernah ada di sana:
+  // nomor BMN, lokasi fisik penyimpanan, suhu simpan saat diterima. Semuanya
+  // diambil dari baris penerimaan pertama yang mengisinya.
+  const fromReceipts = new Map();
   for (const r of receipts) {
-    const prev = docsByKey.get(r.key) || { coa: null, msds: null, statusCoa: '', statusMsds: '' };
+    const prev = fromReceipts.get(r.key) || {
+      coa: null, msds: null, statusCoa: '', statusMsds: '',
+      kategori: '', kodeBmn: '', lokasiSimpan: '', suhuSimpan: '',
+    };
     if (!prev.coa && r.hasCoa) prev.coa = r.linkCoa;
     if (!prev.msds && r.hasMsds) prev.msds = r.linkMsds;
     prev.statusCoa = r.statusCoa || prev.statusCoa;
     prev.statusMsds = r.statusMsds || prev.statusMsds;
-    docsByKey.set(r.key, prev);
+    prev.kategori = prev.kategori || r.kategori || '';
+    prev.kodeBmn = prev.kodeBmn || r.kodeBmn || '';
+    prev.lokasiSimpan = prev.lokasiSimpan || r.lokasiSimpan || '';
+    prev.suhuSimpan = prev.suhuSimpan || r.suhuSimpan || '';
+    fromReceipts.set(r.key, prev);
+  }
+
+  // Lot yang belum pernah muncul di Penerimaan masih bisa punya kategori dari
+  // tab transaksi lain; keduanya menyimpan kolom Kategori sendiri.
+  const kategoriByKey = new Map();
+  for (const r of [...issues, ...disposals]) {
+    if (r.kategori && !kategoriByKey.has(r.key)) kategoriByKey.set(r.key, r.kategori);
   }
 
   const issuesByKey = groupBy(issues, (r) => r.key);
   const receiptsByKey = groupBy(receipts, (r) => r.key);
   const disposalsByKey = groupBy(disposals, (r) => r.key);
 
-  const lots = (tables.master || []).filter(hasIdentity).map((r) => {
+  const lots = masterRows.map((r) => {
     const key = lotKey(r.kode, r.lot);
     const { bucket, days } = bucketFor(r.expDate, today, thresholds);
 
     const stokAwal = num(r.stokAwal);
     const pembelian = num(r.pembelian);
+    const hibah = num(r.hibah);
+    const titipan = num(r.titipan);
     const distribusi = num(r.distribusi);
     const pemusnahan = num(r.pemusnahan);
     const sisaStok = num(r.sisaStok);
     const stokMin = num(r.stokMin);
-    const computedSisa = stokAwal + pembelian - distribusi - pemusnahan;
+    // Hibah dan Titipan Daerah ikut dijumlahkan di rumus Sisa Stok milik sheet;
+    // kalau dilewatkan di sini, setiap lot hibah akan dilaporkan tidak cocok.
+    const masuk = stokAwal + pembelian + hibah + titipan;
+    const computedSisa = masuk - distribusi - pemusnahan;
 
-    const docs = docsByKey.get(key) || { coa: null, msds: null, statusCoa: '', statusMsds: '' };
+    const docs = fromReceipts.get(key) || {
+      coa: null, msds: null, statusCoa: '', statusMsds: '',
+      kategori: '', kodeBmn: '', lokasiSimpan: '', suhuSimpan: '',
+    };
     const status = (r.status || '').toUpperCase();
     const isExpired = bucket === BUCKET.EXPIRED;
 
@@ -134,11 +197,20 @@ export function normalize(tables, options = {}) {
       key,
       stokAwal,
       pembelian,
+      hibah,
+      titipan,
       distribusi,
       pemusnahan,
       sisaStok,
       stokMin,
+      masuk,
       computedSisa,
+
+      // Tidak ada lagi di Master Stok — diambil dari tab transaksi.
+      kategori: docs.kategori || kategoriByKey.get(key) || '',
+      kodeBmn: docs.kodeBmn,
+      lokasiSimpan: docs.lokasiSimpan,
+      suhuSimpan: docs.suhuSimpan || r.lokasi || '',
       status,
       bucket,
       daysToExpiry: days,

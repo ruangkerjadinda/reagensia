@@ -47,18 +47,22 @@ export function summarize(data) {
     penerimaanQty: sum(receipts, (r) => r.qty),
     distribusiQty: sum(issues, (r) => r.qty),
     pemusnahanQty: sum(disposals, (r) => r.qty),
-    masterMasuk: sum(lots, (l) => l.stokAwal) + sum(lots, (l) => l.pembelian),
+    masterMasuk: sum(lots, (l) => l.masuk),
     masterStokAwal: sum(lots, (l) => l.stokAwal),
     masterPembelian: sum(lots, (l) => l.pembelian),
+    masterHibah: sum(lots, (l) => l.hibah),
+    masterTitipan: sum(lots, (l) => l.titipan),
     masterDistribusi: sum(lots, (l) => l.distribusi),
     masterPemusnahan: sum(lots, (l) => l.pemusnahan),
   };
 
-  // Di workbook ini setiap baris Penerimaan tercatat di kolom Stok Awal, jadi
-  // sisi Master dari rekonsiliasi adalah Stok Awal + Pembelian, bukan Pembelian
-  // saja. Selisih di sini berarti ada qty yang dihitung dua kali atau terlewat.
+  // Semua baris Penerimaan mendarat di salah satu dari empat kolom masuk —
+  // Stok Awal, Pembelian, Hibah, Titipan Daerah — tergantung kolom Kategori di
+  // tab Penerimaan. Jadi sisi Master dari rekonsiliasi adalah jumlah keempatnya,
+  // bukan Pembelian saja. Selisih di sini berarti ada qty yang dihitung dua kali
+  // atau terlewat.
   const reconciliation = [
-    recon('Penerimaan → Stok Awal + Pembelian', totals.penerimaanQty, totals.masterMasuk),
+    recon('Penerimaan → kolom masuk Master Stok', totals.penerimaanQty, totals.masterMasuk),
     recon('Distribusi → kolom Distribusi', totals.distribusiQty, totals.masterDistribusi),
     recon('Pemusnahan → kolom Pemusnahan', totals.pemusnahanQty, totals.masterPemusnahan),
   ];
@@ -309,7 +313,7 @@ export function buildAlerts(data) {
 
   push('medium', 'sisa-mismatch',
     'Sisa Stok tidak cocok dengan hitungan',
-    'Sisa Stok berbeda dari Stok Awal + Pembelian − Distribusi − Pemusnahan. Angka di sheet ditulis manual.',
+    'Sisa Stok berbeda dari jumlah kolom masuk (Stok Awal + Pembelian + Hibah + Titipan Daerah) dikurangi Distribusi dan Pemusnahan. Angka di sheet ditulis manual.',
     lots.filter((l) => l.sisaMismatch));
 
   push('medium', 'no-expiry',

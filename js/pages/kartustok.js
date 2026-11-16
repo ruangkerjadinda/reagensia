@@ -27,7 +27,7 @@ export function render({ data }) {
   page.append(filterBar({
     lots: data.lots,
     fields: ['instalasi', 'kategori'],
-    placeholder: 'Cari reagen untuk membuka kartunya…',
+    placeholder: 'Cari nama reagen, kode, nomor BMN, atau lot…',
   }));
 
   const selected = params.lot ? data.lots.find((l) => l.key === params.lot) : null;
@@ -50,9 +50,12 @@ export function render({ data }) {
           key: 'nama',
           label: 'Reagen',
           className: 'wrap strong',
-          render: (l) => el('div', {}, l.nama || '—', el('span.sub', { text: `${l.kode} · ${l.lot || 'tanpa lot'}` })),
+          render: (l) => el('div', {}, l.nama || '—', el('span.sub', {
+            text: [l.kode, l.kodeBmn ? `BMN ${l.kodeBmn}` : null, l.lot || 'tanpa lot'].filter(Boolean).join(' · '),
+          })),
           csv: (l) => l.nama,
         },
+        { key: 'kodeBmn', label: 'Kode BMN', render: (l) => l.kodeBmn || '—' },
         { key: 'instalasi', label: 'Instalasi' },
         {
           key: 'transaksi',
@@ -95,6 +98,83 @@ export function ledger(lot) {
   return entries;
 }
 
+/**
+ * Kartu stok versi cetak — satu lembar, sengaja meniru kartu fisik yang
+ * ditempel di lemari pendingin: blok identitas di atas, lalu tabel mutasi
+ * dengan kolom paraf.
+ *
+ * Barisnya diganjal sampai `MIN_BARIS` supaya kartu yang baru dicetak tetap
+ * punya ruang tulis tangan — kartu ini dipakai berdampingan dengan dashboard,
+ * bukan menggantikannya, dan transaksi berikutnya sering ditulis dulu di
+ * kertas sebelum masuk ke spreadsheet.
+ */
+const MIN_BARIS = 14;
+
+function printCard(lot, entries, akhir) {
+  const idRows = [
+    ['Nama Reagen', lot.nama],
+    ['Merk / Pabrikan', lot.merk],
+    ['REF / Kode', lot.kode],
+    ['Kode BMN', lot.kodeBmn],
+    ['No. LOT', lot.lot],
+    ['Satuan', lot.unit],
+    ['Expired Date', lot.expDate ? fmtDate(lot.expDate) : ''],
+    ['Lokasi Penyimpanan', [lot.lokasiSimpan, lot.suhuSimpan].filter(Boolean).join(' · ')],
+    ['Instalasi', lot.instalasi],
+    ['Kategori', lot.kategori],
+    ['Supplier', lot.supplier],
+    ['PIC', lot.pic],
+  ];
+
+  const body = entries.map((e) => el('tr', {},
+    el('td', { text: e.date ? fmtDate(e.date) : '' }),
+    el('td.wrap', { text: [e.jenis, e.ket].filter(Boolean).join(' — ') }),
+    el('td.num', { text: e.masuk ? fmtNum(e.masuk) : '' }),
+    el('td.num', { text: e.keluar ? fmtNum(e.keluar) : '' }),
+    el('td.num', { text: fmtNum(e.saldo) }),
+    el('td', { text: e.pic || '' })));
+
+  for (let i = entries.length; i < MIN_BARIS; i += 1) {
+    body.push(el('tr.kosong', {}, ...Array.from({ length: 6 }, () => el('td', { text: ' ' }))));
+  }
+
+  return el('section.print-only.kartu-cetak', {},
+    el('header.kartu-cetak-head', {},
+      el('h1', { text: 'KARTU STOK REAGEN' }),
+      el('span.kartu-cetak-cap', { text: `Dicetak ${fmtDate(new Date())}` })),
+
+    el('table.kartu-cetak-id', {}, el('tbody', {}, ...pairRows(idRows))),
+
+    el('table.kartu-cetak-mutasi', {},
+      el('thead', {}, el('tr', {},
+        el('th', { text: 'Tanggal' }),
+        el('th', { text: 'Keterangan' }),
+        el('th.num', { text: 'Masuk' }),
+        el('th.num', { text: 'Keluar' }),
+        el('th.num', { text: 'Sisa Stok' }),
+        el('th', { text: 'Paraf' }))),
+      el('tbody', {}, ...body)),
+
+    el('div.kartu-cetak-kaki', {},
+      el('span', { text: `Saldo akhir menurut transaksi: ${fmtNum(akhir)} ${lot.unit || ''}`.trim() }),
+      el('span', { text: `Sisa Stok di Master Stok: ${fmtNum(lot.sisaStok)} ${lot.unit || ''}`.trim() })));
+}
+
+/** Dua pasang label:nilai per baris, supaya blok identitas tetap pendek. */
+function pairRows(rows) {
+  const out = [];
+  for (let i = 0; i < rows.length; i += 2) {
+    const [k1, v1] = rows[i];
+    const pair = rows[i + 1];
+    out.push(el('tr', {},
+      el('th', { text: k1 }),
+      el('td', { text: v1 || '—' }),
+      el('th', { text: pair ? pair[0] : '' }),
+      el('td', { text: pair ? (pair[1] || '—') : '' })));
+  }
+  return out;
+}
+
 function card(lot, data) {
   const entries = ledger(lot);
   const akhir = entries.length ? entries[entries.length - 1].saldo : 0;
@@ -106,28 +186,30 @@ function card(lot, data) {
       el('span.spacer'),
       btn('Cetak kartu', { icon: 'cetak', onclick: () => printWithTitle(`Kartu Stok — ${lot.nama}`) })),
 
-    el('div.print-only.print-head', {},
-      el('h1', { text: 'Kartu Stok Reagen' }),
-      el('div.meta', { text: `${lot.nama} · ${lot.kode} · lot ${lot.lot || '-'} · dicetak ${fmtDate(new Date())}` })),
+    // Versi cetak dibangun terpisah, bukan versi layar yang disembunyikan
+    // sebagian: yang dicetak harus muat satu lembar dan berbentuk kartu stok
+    // yang biasa dipakai di lab, bukan tangkapan layar dashboard.
+    printCard(lot, entries, akhir),
 
-    el('section.card', {},
+    el('section.card.no-print', {},
       cardHead(lot.nama || lot.kode, `${lot.kode} · ${lot.lot || 'tanpa nomor lot'}`),
       el('dl.dl', {},
-        ...[['Instalasi', lot.instalasi], ['Merk', lot.merk], ['Kategori', lot.kategori],
-          ['Supplier', lot.supplier], ['Unit', lot.unit], ['Suhu simpan', lot.lokasi],
+        ...[['Instalasi', lot.instalasi], ['Kode BMN', lot.kodeBmn], ['Merk', lot.merk],
+          ['Kategori', lot.kategori], ['Supplier', lot.supplier], ['Unit', lot.unit],
+          ['Suhu simpan', lot.suhuSimpan], ['Lokasi simpan', lot.lokasiSimpan],
           ['Kedaluwarsa', lot.expDate ? fmtDate(lot.expDate) : '—'], ['PIC', lot.pic]]
           .flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v || '—' })]))),
 
     !cocok
-      ? notice({
+      ? el('div.no-print', {}, notice({
         tone: 'warn',
         icon: 'alert',
         title: 'Saldo kartu berbeda dengan Sisa Stok di Master Stok',
         body: `Menjumlahkan transaksi menghasilkan ${fmtNum(akhir)}, sementara Master Stok baris ${lot._row} menulis ${fmtNum(lot.sisaStok)}. Selisih ini muncul kalau ada transaksi yang belum tercatat di tabnya, atau Sisa Stok diketik manual.`,
-      })
+      }))
       : null,
 
-    el('section.card.card--flush', {},
+    el('section.card.card--flush.no-print', {},
       cardHead('Mutasi', `${fmtNum(entries.length)} transaksi · saldo akhir ${fmtNum(akhir)} ${lot.unit || ''}`.trim()),
       entries.length
         ? dataTable({

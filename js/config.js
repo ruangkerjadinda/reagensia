@@ -54,8 +54,12 @@ export const TABS = {
 export const TAB_GIDS = {
   master: 1582778964,
   penerimaan: 1439568414,
-  distribusi: 1861623006,
-  pemusnahan: 2097351299,
+  // Diperiksa lewat /export?format=csv&gid=… : gid 2097351299 memang tab
+  // Distribusi dan 1861623006 tab Pemusnahan, bukan sebaliknya. Sebelumnya
+  // tertukar, jadi tautan "Buka di Sheets" dari kedua tab itu membuka tab
+  // yang salah tanpa ada yang terlihat keliru.
+  distribusi: 2097351299,
+  pemusnahan: 1861623006,
   kartuStok: null,
 };
 

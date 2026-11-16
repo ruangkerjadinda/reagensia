@@ -14,8 +14,14 @@ import { SCHEMA, FIRST_DATA_ROW, resolveColumns } from './schema.js';
 const TIMEOUT_MS = 25000;
 const RETRIES = 1;
 
-function gvizUrl(spreadsheetId, sheetName, bust) {
+/**
+ * `headers` dikirim eksplisit, tidak dibiarkan ditebak gviz: di tab Distribusi
+ * ada dua angka nyasar di baris 2 yang membuat gviz mengira data mulai di situ,
+ * dan seluruh label kolom datang kosong. Lihat catatan di schema.js.
+ */
+function gvizUrl(spreadsheetId, sheetName, headers, bust) {
   const params = new URLSearchParams({ tqx: 'out:json', sheet: sheetName });
+  if (headers != null) params.set('headers', String(headers));
   if (bust) params.set('_', String(Date.now()));
   return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?${params}`;
 }
@@ -83,7 +89,7 @@ async function fetchTabOnce(spreadsheetId, tabKey, { bust = false, signal } = {}
   try {
     let res;
     try {
-      res = await fetch(gvizUrl(spreadsheetId, spec.tab, bust), {
+      res = await fetch(gvizUrl(spreadsheetId, spec.tab, spec.headers, bust), {
         signal: controller.signal,
         cache: bust ? 'no-store' : 'default',
       });

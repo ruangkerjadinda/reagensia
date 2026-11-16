@@ -231,7 +231,7 @@ function writeCard(rerender) {
       el('h4', { text: 'Pemeliharaan', style: { fontSize: '12px', color: 'var(--ink-muted)', marginBottom: '8px' } }),
       el('p', {
         style: { fontSize: '12px', color: 'var(--ink-secondary)', marginBottom: '10px' },
-        text: 'Sebagian baris Master Stok punya Sisa Stok yang diketik manual, bukan rumus. Perintah di bawah mengembalikan rumus =Stok Awal + Pembelian − Distribusi − Pemusnahan pada baris-baris itu. Jalankan uji coba dulu untuk melihat baris mana yang akan tersentuh.',
+        text: 'Sebagian baris Master Stok punya Sisa Stok yang diketik manual, bukan rumus. Perintah di bawah mengembalikan rumus =Stok Awal + Pembelian + Hibah + Titipan Daerah − Distribusi − Pemusnahan pada baris-baris itu. Jalankan uji coba dulu untuk melihat baris mana yang akan tersentuh.',
       }),
       el('div.toolbar', {},
         btn('Uji coba (tanpa menulis)', {

@@ -93,7 +93,6 @@ export function openTransactionForm(kind, { data, lot: preselected }) {
       { key: 'tanggal', label: 'Tanggal distribusi', type: 'date', required: true, value: new Date() },
       { key: 'qty', label: 'Jumlah keluar', type: 'number', required: true, min: 1 },
       { key: 'unit', label: 'Unit', type: 'select', options: uniq(data.lots, (l) => l.unit), required: true },
-      { key: 'periodePakai', label: 'Periode pakai', type: 'select', options: uniq(data.issues, (r) => r.periodePakai) },
       { key: 'picPengirim', label: 'PIC pengirim', required: true, value: CONFIG.actor },
       { key: 'picPenerima', label: 'PIC penerima', required: true },
       { key: 'ket', label: 'Keterangan', span: 2 },
@@ -101,7 +100,6 @@ export function openTransactionForm(kind, { data, lot: preselected }) {
     pemusnahan: [
       { key: 'tanggal', label: 'Tanggal musnah', type: 'date', required: true, value: new Date() },
       { key: 'qty', label: 'Jumlah dimusnahkan', type: 'number', required: true, min: 1 },
-      { key: 'unit', label: 'Unit', type: 'select', options: uniq(data.lots, (l) => l.unit), required: true },
       {
         key: 'alasan',
         label: 'Alasan pemusnahan',

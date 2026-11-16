@@ -31,56 +31,71 @@ kurung kurawal terluar.
 
 ## Yang perlu diketahui tentang workbook ini
 
-Temuan berikut hasil pemeriksaan langsung. Jangan disimpulkan ulang dari nol.
+**Workbook ini disusun ulang besar-besaran menjelang November 2026** — kolom
+pindah, beberapa dihapus, beberapa ditambah, dan tab Distribusi ditulis ulang.
+Catatan di bawah adalah hasil pemeriksaan langsung 16 Nov 2026; catatan versi
+sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
+**tidak berlaku** dan jangan dipakai sebagai acuan.
 
-1. **Baris 197 Master Stok adalah baris total, bukan lot.** Stok Awal 1063, Sisa
-   1007. Disaring lewat pemeriksaan identitas (`kode || nama || instalasi`), bukan
-   nomor baris — angka benarnya **193 lot / 1007 unit**, bukan 194 / 2014.
+1. **Keempat tab utama berformat sama:** banner baris 1, kosong 2-3, judul kolom
+   baris 4, data mulai baris 5. gviz biasanya menebak ini sendiri, tapi di tab
+   Distribusi tebakannya gagal — ada dua angka nyasar (`100`, `100`) di baris 2
+   kolom Q/R, gviz mengira data mulai di situ, dan **seluruh label kolom datang
+   kosong** sehingga setiap field jatuh ke pencocokan posisi dan tab itu terbaca
+   geser satu kolom. Karena itu `headers` sekarang dikirim eksplisit per tab dari
+   `schema.js` (`headers: 4`). Tab Kartu Stok justru **rusak kalau dipaksa** —
+   di sana tebakan gviz sudah benar, jadi `headers: undefined`.
 
-2. **Kolom Pembelian, Distribusi, dan Pemusnahan di Master Stok diisi manual**,
-   bukan rumus `SUMIF` ke tab transaksi. Konsekuensinya besar: menambah baris
-   transaksi saja membuat angka Master Stok melenceng. Setiap penulisan harus
-   sepasang — baris transaksi **dan** kolom ringkasannya, dalam satu kunci.
+2. **Rumus otomatis Master Stok sudah dipasang Dinda sendiri** (bukan lewat
+   `Formulas.gs`). Pembelian, Hibah, Titipan Daerah, Distribusi, dan Pemusnahan
+   terisi sendiri dari tab transaksi. Anggapan lama "setiap penulisan harus
+   sepasang" **tidak berlaku lagi** — cukup baris transaksinya. Per 16 Nov 2026
+   ketiga rekonsiliasi cocok persis dan **tidak ada satu pun** dari 326 lot yang
+   Sisa Stok-nya melenceng.
 
-   **`apps-script/Formulas.gs` mengubah ini** (lihat `apps-script/RUMUS.md`) —
-   ketiganya jadi `SUMIFS` ke tab transaksi. Per 16 Sep 2026 sudah diperiksa
-   aman dipasang: 203 lot, tidak ada kunci `kode|lot` ganda, tidak ada selisih
-   per lot di ketiga tab, dan pencocokan ala SUMIFS (mentah) memberi hasil yang
-   sama persis dengan pencocokan dashboard (dinormalkan) — 0 beda, 0 baris
-   yatim, tidak ada karakter wildcard di Kode/Lot. **Belum dijalankan di
-   workbook aslinya**; itu keputusan pemilik spreadsheet.
+3. **Dua kolom masuk baru: Hibah (K) dan Titipan Daerah (L).** Rumusnya sekarang
+   `Sisa Stok = Stok Awal + Pembelian + Hibah + Titipan Daerah − Distribusi −
+   Pemusnahan`. Melewatkan dua kolom itu membuat ratusan lot dilaporkan tidak
+   cocok padahal sheet-nya benar.
 
-   Kalau sudah dipasang, anggapan "tulis sepasang" di atas **tidak berlaku
-   lagi** — cukup baris transaksinya. `Code.gs` sudah menyesuaikan diri:
-   `bumpMaster()` melewati kolom yang berisi rumus (kalau ditimpa, hitungannya
-   dobel karena baris transaksi ditulis lebih dulu, **dan** rumusnya hilang),
-   dan lot baru menyalin rumus dari baris yang sudah benar.
+4. **Kolom Kategori sudah tidak ada lagi di Master Stok.** Sekarang hidup di tab
+   transaksi (Penerimaan kolom M: Pembelian 2026 / Hibah / Titipan Daerah / Stok
+   Awal). `normalize.js` menurunkannya per lot dari baris penerimaan, jadi filter
+   Kategori di semua halaman tetap jalan.
 
-3. **Sisa Stok seharusnya rumus** `=Stok Awal + Pembelian − Distribusi −
-   Pemusnahan`. Di 13 baris rumusnya diganti angka ketikan; 7 di antaranya
-   sekarang tidak cocok. Baris 173 (`IMB-0077`) menaruh 240 di Stok Awal *dan*
-   Pembelian lalu menimpa hasilnya dengan 240.
+5. **Tab Pemusnahan tidak punya kolom Kode sama sekali.** Barisnya dikunci ke
+   Master Stok lewat pasangan Nama Reagen + Kode/Lot (`kodeResolver()` di
+   `normalize.js`); semua 90 baris ketemu. **Jangan diganti jadi pencocokan lot
+   saja** — ada 14 nomor lot yang dipakai lebih dari satu reagen, dan menebak di
+   situ akan memindahkan transaksi ke lot orang lain.
 
-4. **Baris judul berbeda tiap tab.** Master Stok: banner baris 1, kosong 2,
-   judul 3, data 4+. Distribusi: judul baris 4, data 5+. Karena itu Code.gs
-   *mencari* baris judul (memindai "Instalasi"), tidak menebaknya.
+6. **gid Distribusi dan Pemusnahan tertukar di `config.js`.** Sudah diperiksa
+   lewat `/export?format=csv&gid=…` dan diperbaiki: Distribusi `2097351299`,
+   Pemusnahan `1861623006`. Sebelumnya tautan "Buka di Sheets" dari kedua tab itu
+   membuka tab yang salah tanpa ada yang terlihat keliru.
 
-5. **gviz menempelkan banner ke label kolom pertama** — kolom A Master Stok
+7. **KODE BMN ada di tab Penerimaan kolom X**, terisi di 61 dari 326 baris.
+   Nilainya **per lot**, bukan per reagen (tiga kode reagen punya lebih dari satu
+   nomor BMN), jadi diturunkan lewat kunci `kode|lot` seperti COA/MSDS.
+
+8. **gviz menempelkan banner ke label kolom pertama** — kolom A Master Stok
    datang sebagai `"INVENTORY STOK REAGEN (Real-time) No"`. `schema.js`
    mencocokkan lewat label dengan `endsWith`, dan jatuh ke posisi kolom kalau
    gagal.
 
-6. **`Instalasi` di tab Distribusi adalah unit tujuan, bukan pemilik.** Master
-   Stok punya 3 instalasi; Distribusi memakai `Molekuler`, Kartu Stok memakai
-   `Bakteriologi`. Jangan digabung jadi satu daftar.
+9. **Daftar instalasi tumbuh jadi enam:** K3, Kesehatan Lingkungan, Mikrobiologi,
+   Patologi Klinik, Samres, Surveilans. `Bakteriologi` dan `Molekuler` yang dulu
+   muncul di tab transaksi sudah tidak ada.
 
-7. **Semua baris Penerimaan secara historis masuk ke kolom Stok Awal**, bukan
-   Pembelian (1063 = 1063). Kolom Pembelian praktis tak terpakai. Untuk baris
-   *baru*, Code.gs menambah ke Pembelian — itu yang benar secara makna.
+10. **Tab Kartu Stok tersembunyi dan rumusnya rusak** — `XLOOKUP` menunjuk sheet
+    `Master Reagen` yang tidak ada. Halaman Kartu Stok membangun ulang kartunya
+    dari tab transaksi, bukan membaca tab itu.
 
-8. **Tab Kartu Stok tersembunyi dan rumusnya rusak** — `XLOOKUP` menunjuk sheet
-   `Master Reagen` yang tidak ada. Halaman Kartu Stok membangun ulang kartunya
-   dari tab transaksi, bukan membaca tab itu.
+11. **`apps-script/Code.gs` belum disesuaikan ke susunan baru ini.** Mode input
+    masih mati (endpoint kosong), jadi tidak ada yang rusak sekarang, tapi
+    `colOf()` di sana mencari kolom `Kategori` di Master Stok dan `Metode
+    Pemusnahan`/`Periode Pakai` yang sudah tidak ada — kalau dipasang apa adanya,
+    ia akan melempar error. Ini pekerjaan tersendiri sebelum mode input dipakai.
 
 ## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
 
@@ -96,9 +111,14 @@ Pertanyaan yang berulang dari Dinda. Jawabannya berbeda-beda per kasus:
   barunya ke `aliases` field itu. Untuk mode input, `colOf()` di `Code.gs`
   memakai kesamaan persis (bukan `endsWith`) dan kolom wajib akan **melempar
   error** — ini justru bagus, gagalnya berisik.
-- **Dihapus: paling berbahaya.** Label hilang → jatuh ke posisi lama →
-  padahal kolom setelahnya sudah bergeser, jadi yang terbaca adalah **kolom
-  tetangganya**, bukan error. Angkanya salah tanpa ada yang merah. Satu-satunya
+- **Dihapus: paling berbahaya.** Label hilang → jatuh ke posisi lama → padahal
+  kolom setelahnya sudah bergeser, jadi yang terbaca adalah **kolom
+  tetangganya**, bukan error. Inilah yang benar-benar terjadi saat Kategori
+  dihapus dari Master Stok: `kategori` mengambil kolom Supplier, lalu `supplier`
+  terdorong ke Stok Awal dan `stokAwal` ke Pembelian — tiga kolom salah,
+  tidak ada satu pun yang merah. `resolveColumns()` sekarang **menolak** memakai
+  kolom cadangan yang sudah diambil field lain (rantai geser itu berhenti di
+  kolom pertama), tapi kolom pertamanya tetap salah diam-diam. Satu-satunya
   tanda adalah baris peringatan di halaman Pengaturan ("dicocokkan lewat
   posisi"). Kalau ada kolom yang benar-benar mau dihapus, hapus juga field-nya
   dari `schema.js` dalam perubahan yang sama.
@@ -106,22 +126,26 @@ Pertanyaan yang berulang dari Dinda. Jawabannya berbeda-beda per kasus:
 Kolom **baru** yang disisipkan di tengah tidak merusak apa pun — itu memang
 alasan pencocokan label didahulukan.
 
-## Angka acuan (27 Agu 2026)
+## Angka acuan (16 Nov 2026)
 
 Dipakai untuk memastikan tidak ada yang rusak setelah perubahan. Jalankan
-`npm run verify`.
+`npm run verify`. Angka ini bergerak sendiri setiap kali Dinda mengisi sheet —
+yang penting bukan nilainya persis, tapi tiga baris terakhir tetap **cocok**.
 
 | | |
 |---|---|
-| Lot / reagen / total stok | 193 · 143 · 1007 |
-| Risiko (expired / ≤30 / ≤90 / ≤180 / aman / tanpa tanggal) | 69 · 3 · 13 · 23 · 70 · 15 |
-| Stok rendah / habis | 89 · 3 |
-| Kedaluwarsa tapi AKTIF | 12 |
-| Sisa Stok tidak cocok | 7 |
-| Tanpa supplier / tanpa lot | 84 · 5 |
-| COA / MSDS | 61 · 55 dari 193 |
-| Baris berbeda yang perlu dirapikan | 99 |
-| Rekonsiliasi | Distribusi ✓ 31=31 · Pemusnahan ✓ 0=0 · Penerimaan ✗ 1063 vs 1303 |
+| Lot / reagen / total stok | 326 · 236 · 3118 |
+| Risiko (expired / ≤30 / ≤90 / ≤180 / aman / tanpa tanggal) | 98 · 11 · 17 · 22 · 97 · 81 |
+| Stok rendah / habis | 200 · 111 |
+| Kedaluwarsa tapi AKTIF | 0 |
+| Sisa Stok tidak cocok | 0 |
+| Tanpa supplier / tanpa lot | 112 · 53 |
+| COA / MSDS | 54 · 39 dari 326 baris penerimaan |
+| Baris berbeda yang perlu dirapikan | 186 |
+| Rekonsiliasi | Penerimaan ✓ 3646=3646 · Distribusi ✓ 114=114 · Pemusnahan ✓ 414=414 |
+
+Pemetaan kolom harus melaporkan **"semua field tercocokkan lewat label"**. Satu
+baris peringatan saja berarti susunan sheet berubah lagi.
 
 ## Susunan
 
@@ -261,5 +285,15 @@ Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 - Dialog konfirmasi sebelum menulis menuliskan **persis baris yang ditambahkan
   dan akibatnya di Master Stok** ("Sisa Stok 9 → 8"). Yang ditulis adalah
   inventaris yang dipakai orang lain; "Anda yakin?" saja tidak cukup.
+- Kartu Stok punya **dua tata letak terpisah**: yang di layar (kartu + tabel
+  mutasi lengkap dengan nomor baris sheet) dan yang dicetak (`printCard()` di
+  `js/pages/kartustok.js`, gaya `.kartu-cetak*` di `css/print.css`). Yang
+  dicetak sengaja bukan versi layar yang disembunyikan sebagian: bentuknya
+  meniru kartu manual yang ditempel di lemari pendingin — blok identitas
+  berkotak, tabel mutasi berkolom Paraf, baris kosong diganjal sampai 14 supaya
+  masih bisa ditulis tangan, dan semuanya **muat satu lembar A4** (terukur
+  ±161 mm dari 269 mm ruang cetak). Kalau ukuran huruf atau tinggi barisnya
+  diubah, hitung ulang batas itu.
+
 - Halaman Audit memperlakukan sheet sebagai sumber yang **bisa salah**, dan
   setiap temuan menunjuk balik ke nomor barisnya di Google Sheets.

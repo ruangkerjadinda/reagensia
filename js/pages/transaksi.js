@@ -132,16 +132,15 @@ function tableFor(kind, rows, data) {
     distribusi: [
       ...common,
       { key: 'qty', label: 'Qty keluar', align: 'num', render: (r) => `${fmtNum(r.qty)} ${r.unit || ''}`.trim() },
-      { key: 'periodePakai', label: 'Periode pakai' },
       { key: 'picPenerima', label: 'Penerima' },
       { key: 'picPengirim', label: 'Pengirim' },
       ...tail,
     ],
     pemusnahan: [
       ...common,
-      { key: 'qty', label: 'Qty', align: 'num', render: (r) => `${fmtNum(r.qty)} ${r.unit || ''}`.trim() },
+      // Tab Pemusnahan tidak punya kolom Unit maupun Metode Pemusnahan lagi.
+      { key: 'qty', label: 'Qty', align: 'num', render: (r) => fmtNum(r.qty) },
       { key: 'alasan', label: 'Alasan', className: 'wrap' },
-      { key: 'metode', label: 'Metode' },
       { key: 'pic', label: 'PIC' },
       ...tail,
     ],

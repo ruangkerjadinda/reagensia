@@ -58,7 +58,9 @@ export function applyFilters(lots, params) {
     if (params.temuan === 'ya' && !(lot.expiredButActive || lot.sisaMismatch || lot.missingExpiry || lot.missingLot)) return false;
 
     if (!terms.length) return true;
-    const haystack = [lot.kode, lot.nama, lot.lot, lot.merk, lot.supplier, lot.instalasi, lot.pic]
+    // Nomor BMN ikut dicari: di daftar aset rumah sakit reagen dirujuk lewat
+    // nomor itu, bukan lewat kode reagen, jadi keduanya harus sama-sama ketemu.
+    const haystack = [lot.kode, lot.kodeBmn, lot.nama, lot.lot, lot.merk, lot.supplier, lot.instalasi, lot.pic]
       .filter(Boolean).join(' ').toLowerCase();
     return terms.every((t) => haystack.includes(t));
   });
@@ -142,19 +144,22 @@ export function openLotDrawer(lot) {
   const rows = [
     ['Instalasi', lot.instalasi],
     ['Kode', lot.kode],
+    ['Kode BMN', lot.kodeBmn],
     ['Nomor lot', lot.lot],
     ['Merk', lot.merk],
     ['Kategori', lot.kategori],
     ['Supplier', lot.supplier],
     ['Unit', lot.unit],
-    ['Suhu simpan', lot.lokasi],
+    ['Suhu simpan', lot.suhuSimpan],
+    ['Lokasi simpan', lot.lokasiSimpan],
     ['PIC', lot.pic],
-    ['Pembaruan terakhir', lot.lastUpdate ? fmtDate(lot.lastUpdate) : null],
   ];
 
   const stock = el('div.diff', {},
     diff('Stok awal', money(lot.stokAwal)),
     diff('Pembelian', `+ ${money(lot.pembelian)}`),
+    lot.hibah ? diff('Hibah', `+ ${money(lot.hibah)}`) : null,
+    lot.titipan ? diff('Titipan daerah', `+ ${money(lot.titipan)}`) : null,
     diff('Distribusi', `− ${money(lot.distribusi)}`),
     diff('Pemusnahan', `− ${money(lot.pemusnahan)}`),
     diff('Sisa menurut hitungan', money(lot.computedSisa)),
