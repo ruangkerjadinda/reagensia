@@ -21,12 +21,27 @@
  * didefinisikan di blok dasar (terang) dan blok gelap umum, lalu menurun ke
  * keempat tema apa adanya.
  *
- * PERINGATAN: validator skill dataviz sebelumnya hanya diuji terhadap
- * permukaan biru lama (#ffffff terang / #15181e gelap). Permukaan gelap
- * keempat tema sekarang berbeda-beda (merah muda/hijau/ungu/oranye tua), jadi
- * kontras warna series dan ramp grafik di mode gelap belum divalidasi ulang
- * terhadap permukaan barunya. Jalankan ulang validatornya sebelum
- * mengandalkan grafik di mode gelap non-default.
+ * Validator skill dataviz sudah dijalankan ulang (18 Nov 2026) terhadap
+ * keempat permukaan gelap yang sekarang — Sakura #1f171d, Mint #121e1a,
+ * Lavender #17162a, Peach #211711 — bukan cuma permukaan biru lama #15181e.
+ * Trio kategorikal, pasangan dua seri timeline (series-1 vs critical), dan
+ * ramp ordinal: LULUS di keempatnya, tanpa satu pun FAIL atau WARN.
+ *
+ * Yang paling tipis: --critical #d03b3b di atas permukaan Mint, 3,56:1 —
+ * masih di atas ambang 3:1. Mint selalu yang paling tipis dari keempatnya
+ * karena hijau menyumbang paling besar ke luminansi, jadi #121e1a yang
+ * tampak paling gelap justru luminansinya paling tinggi. Selisih kontras
+ * antar tema paling besar cuma ~4%, jadi tema warna bukan faktor penentu di
+ * sini — tapi kalau ada biji permukaan gelap baru, ulangi pengukurannya:
+ *
+ *   node <skill dataviz>/scripts/validate_palette.js \
+ *     "#3987e5,#d95926,#199e70" --mode dark --surface "#121e1a"
+ *
+ * Catatan soal status: memasukkan --warning #fab219 ke validator itu selalu
+ * FAIL "lightness band", di permukaan lama maupun baru. Itu bukan temuan —
+ * pita lightness adalah syarat palet KATEGORIKAL supaya antar-seri terbaca
+ * setara, sementara status memang sengaja tidak setara dan selalu tampil
+ * bersama bentuk (toneMark) dan teks. Kontrasnya sendiri lulus di mana-mana.
  */
 
 :root {

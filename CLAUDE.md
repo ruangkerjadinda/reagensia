@@ -268,14 +268,27 @@ komentar kepala `css/tokens.css`; contoh visualnya (kalau mau bikin tema baru)
 masih di `design/theme-preview.html`.
 
 Palet grafik (series/ramp) sudah divalidasi dengan validator skill `dataviz`
-terhadap permukaan biru lama (`#ffffff` terang / `#15181e` gelap): trio
-kategorikal instalasi, dua seri biru/merah, dan ramp ordinal — semuanya lolos
-di kedua mode. **Permukaan gelap keempat tema warna sekarang berbeda-beda**
-(merah muda/hijau/ungu/oranye tua untuk Sakura/Mint/Lavender/Peach), dan
-validator itu belum dijalankan ulang terhadap ketiganya selain biru — series
-dan ramp sengaja dibiarkan sama di semua tema (lihat paragraf di bawah), tapi
-kontrasnya di atas permukaan baru belum dipastikan. **Jalankan ulang
-validatornya sebelum mengandalkan grafik di mode gelap non-Sakura.**
+**terhadap keempat permukaan gelap yang sekarang** (18 Nov 2026), bukan lagi
+cuma permukaan biru lama: Sakura `#1f171d`, Mint `#121e1a`, Lavender `#17162a`,
+Peach `#211711`. Yang diuji: trio kategorikal instalasi (`#3987e5 · #d95926 ·
+#199e70`), pasangan dua seri timeline (`--series-1` vs `--critical`), dan ramp
+ordinal lima langkah. **Lulus di keempatnya**, tanpa FAIL maupun WARN, dan
+nilai `--surface`/`--series-1` yang dibaca dari halaman yang berjalan sama
+persis dengan yang diuji.
+
+Yang paling tipis `--critical` `#d03b3b` di atas Mint: **3,56:1**, masih di
+atas ambang 3:1. Mint selalu paling tipis karena hijau menyumbang paling besar
+ke luminansi — `#121e1a` yang tampak paling gelap justru luminansinya tertinggi
+dari keempatnya. Selisih kontras antar tema paling besar cuma ~4%, jadi
+**tema warna bukan faktor penentu di sini**; yang menentukan tetap warna
+series-nya sendiri. Kalau ada biji permukaan gelap baru, ulangi pengukurannya —
+perintahnya ada di komentar kepala `css/tokens.css`.
+
+Satu jebakan pengukuran, supaya tidak dikira temuan: memasukkan `--warning`
+`#fab219` ke validator selalu FAIL "lightness band", di permukaan lama maupun
+baru. Pita lightness adalah syarat palet **kategorikal** (supaya antar-seri
+terbaca setara); status memang sengaja tidak setara, dan selalu tampil bersama
+bentuk (`toneMark`) dan teks. Kontras status sendiri lulus di semua permukaan.
 
 Warna status (kritis/serius/peringatan/aman) dan palet grafik sengaja tidak
 ikut tema warna — warnanya membawa arti klinis/kategorikal, bukan selera.
