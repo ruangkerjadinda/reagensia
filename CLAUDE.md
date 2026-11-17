@@ -391,7 +391,7 @@ di PC ini milik akun lain dan tidak tersentuh):
 
 ```
 remote origin   git@github.com:ruangkerjadinda/reagensia.git
-core.sshCommand ssh -i C:/Users/dK/.ssh/reagensia_deploy -o IdentitiesOnly=yes
+core.sshCommand ssh -i C:/Users/dK/.ssh/reagensia_deploy_2026 -o IdentitiesOnly=yes
 user.name       Dinda
 user.email      321590626+ruangkerjadinda@users.noreply.github.com
 ```
@@ -411,26 +411,37 @@ Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 ## Kepemilikan akun
 
 Proyek ini dibuat dari PC yang juga memakai akun lain, jadi kepemilikan tiap
-bagian pernah tercampur. Diperiksa satu per satu pada 18 Nov 2026; yang berikut
-ini **semuanya atas nama `ruangkerjadinda@gmail.com` / GitHub
-`ruangkerjadinda`**: repositori dan Pages, proyek Apps Script "Reagensia
-writer", login `clasp` di PC ini, `SALINAN UJI — Reagensia`, serta kedua folder
-Drive MSDS. Deploy key tidak terikat akun mana pun.
+bagian pernah tercampur. Diberesi tuntas pada 18 Nov 2026. **Semuanya kini atas
+nama `ruangkerjadinda@gmail.com` / GitHub `ruangkerjadinda`**: spreadsheet
+produksi, repositori dan Pages, proyek Apps Script "Reagensia writer", login
+`clasp` di PC ini, `SALINAN UJI — Reagensia`, serta kedua folder Drive MSDS.
 
-Dua hal yang dulu tidak:
+Dua hal yang perlu diingat dari pemberesan itu:
 
-1. **Riwayat git.** Tiga commit pertama ditulis atas nama akun lain yang
-   dipakai di PC yang sama, dan satu commit dari web GitHub memuat alamat
-   Gmail asli Dinda di riwayat publik. Seluruh 20 commit sudah ditulis
-   ulang ke `Dinda <321590626+ruangkerjadinda@users.noreply.github.com>`
-   (`git filter-branch --env-filter`), isi berkasnya tidak berubah sama sekali,
-   lalu di-force-push. **Riwayat lama sudah tidak ada di remote.**
-2. **Spreadsheet produksi** masih milik akun lain sampai pemiliknya
-   memindahkannya lewat Drive. Pemindahan kepemilikan **tidak mengubah id
-   berkas**, jadi `CONFIG.spreadsheetId` dan seluruh `gid` tetap berlaku dan
-   tidak ada kode yang perlu disentuh. Yang perlu dipastikan sesudahnya: bagian
+1. **Riwayat git ditulis ulang, lalu repositorinya dihapus dan dibuat ulang.**
+   Tiga commit pertama ditulis atas nama akun lain yang dipakai di PC yang
+   sama, dan satu commit dari web GitHub memuat alamat Gmail asli Dinda. Semua
+   commit ditulis ulang ke
+   `Dinda <321590626+ruangkerjadinda@users.noreply.github.com>` tanpa mengubah
+   isi berkas sama sekali. **Force-push saja tidak cukup** — commit lama tetap
+   bisa dibuka lewat SHA-nya dan masih muncul di pencarian commit GitHub, jadi
+   repositorinya dihapus dan dibuat ulang dari riwayat bersih. Sesudahnya
+   kelima SHA lama mengembalikan 422 dan pencarian beralamat akun lama
+   mengembalikan 0.
+
+   Akibat sampingannya: **deploy key lama mati permanen.** Satu kunci hanya
+   boleh dipakai satu repo di seluruh GitHub, dan repo yang dihapus masih
+   memesannya (bisa dipulihkan sampai 90 hari), jadi kunci itu ditolak dengan
+   `key is already in use`. Kunci penggantinya `~/.ssh/reagensia_deploy_2026`;
+   yang lama boleh dihapus dari disk setelah masa pemulihan repo lewat.
+
+2. **Pemindahan kepemilikan spreadsheet tidak mengubah id berkas**, jadi
+   `CONFIG.spreadsheetId` dan seluruh `gid` tetap berlaku — tidak ada satu
+   baris kode pun yang perlu disentuh, dan itu sebabnya memindahkan jauh lebih
+   murah daripada menyalin. Dua hal diperiksa sesudahnya dan keduanya aman:
    "siapa saja yang punya tautan dapat melihat" masih menyala (gviz membaca
-   tanpa login), dan akun pemilik skrip tetap punya akses tulis.
+   tanpa login), dan pemilik skrip tetap punya akses tulis. Pemilik lama
+   otomatis turun jadi editor; boleh dicabut kalau memang tidak diperlukan.
 
 `gh` CLI di PC ini login sebagai akun lain dan hanya dipakai membaca status
 Actions; ia tidak punya akses tulis ke repo ini — push lewat deploy key, bukan
@@ -441,8 +452,9 @@ ditulis di sini ikut terbaca semua orang.
 ## Yang belum dikerjakan
 
 - Level 3 (ilustrasi, animasi) **ditunda** — bukan ditolak.
-- Pemindahan kepemilikan spreadsheet produksi ke akun Dinda — satu-satunya
-  bagian yang masih atas nama akun lain (lihat **Kepemilikan akun**).
+- Tulisan pertama lewat dashboard ke workbook asli belum pernah dijalankan;
+  tab `Log` belum ada, dan itu penanda paling jelas bahwa jalurnya belum
+  pernah dipakai sungguhan.
 
 ## Batasan yang sengaja dipilih
 
