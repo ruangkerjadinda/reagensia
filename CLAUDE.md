@@ -393,27 +393,56 @@ di PC ini milik akun lain dan tidak tersentuh):
 remote origin   git@github.com:ruangkerjadinda/reagensia.git
 core.sshCommand ssh -i C:/Users/dK/.ssh/reagensia_deploy -o IdentitiesOnly=yes
 user.name       Dinda
-user.email      ruangkerjadinda@users.noreply.github.com
+user.email      321590626+ruangkerjadinda@users.noreply.github.com
 ```
 
-Langkah yang tersisa, semuanya dilakukan manusia lewat peramban:
+**Alamat noreply harus bentuk ber-ID** (`321590626+…`). Bentuk tanpa ID hanya
+tertaut ke profil untuk akun lama; akun Dinda dibuat belakangan, jadi
+commit-nya tampil tanpa tautan ke profilnya. Seluruh riwayat sudah ditulis
+ulang ke bentuk ini pada 18 Nov 2026 — lihat **Kepemilikan akun** di bawah.
 
-1. Tempel `~/.ssh/reagensia_deploy.pub` ke repo → Settings → Deploy keys →
-   **Allow write access**
-2. `git push -u origin main`
-3. Settings → Pages → Deploy from a branch → `main` / root
-4. Domain: A record apex ke `185.199.108–111.153`, CNAME `www` ke
-   `ruangkerjadinda.github.io`, lalu isi Custom domain di Settings → Pages dan
-   centang Enforce HTTPS
+Semuanya sudah terpasang: deploy key dengan akses tulis, Pages dari `main` /
+root, domain `ruangkerjadinda.space` (A record apex ke `185.199.108–111.153`,
+CNAME `www`), dan **Enforce HTTPS aktif** — `http` dialihkan 301 ke `https`.
 
 Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 `/reagensia`.
 
+## Kepemilikan akun
+
+Proyek ini dibuat dari PC yang juga memakai akun lain, jadi kepemilikan tiap
+bagian pernah tercampur. Diperiksa satu per satu pada 18 Nov 2026; yang berikut
+ini **semuanya atas nama `ruangkerjadinda@gmail.com` / GitHub
+`ruangkerjadinda`**: repositori dan Pages, proyek Apps Script "Reagensia
+writer", login `clasp` di PC ini, `SALINAN UJI — Reagensia`, serta kedua folder
+Drive MSDS. Deploy key tidak terikat akun mana pun.
+
+Dua hal yang dulu tidak:
+
+1. **Riwayat git.** Tiga commit pertama ditulis atas nama akun lain yang
+   dipakai di PC yang sama, dan satu commit dari web GitHub memuat alamat
+   Gmail asli Dinda di riwayat publik. Seluruh 20 commit sudah ditulis
+   ulang ke `Dinda <321590626+ruangkerjadinda@users.noreply.github.com>`
+   (`git filter-branch --env-filter`), isi berkasnya tidak berubah sama sekali,
+   lalu di-force-push. **Riwayat lama sudah tidak ada di remote.**
+2. **Spreadsheet produksi** masih milik akun lain sampai pemiliknya
+   memindahkannya lewat Drive. Pemindahan kepemilikan **tidak mengubah id
+   berkas**, jadi `CONFIG.spreadsheetId` dan seluruh `gid` tetap berlaku dan
+   tidak ada kode yang perlu disentuh. Yang perlu dipastikan sesudahnya: bagian
+   "siapa saja yang punya tautan dapat melihat" masih menyala (gviz membaca
+   tanpa login), dan akun pemilik skrip tetap punya akses tulis.
+
+`gh` CLI di PC ini login sebagai akun lain dan hanya dipakai membaca status
+Actions; ia tidak punya akses tulis ke repo ini — push lewat deploy key, bukan
+lewat akun itu. Berkas ini sengaja tidak menyebut alamat surel atau nama akun
+siapa pun selain yang sudah publik: repositorinya publik, jadi apa pun yang
+ditulis di sini ikut terbaca semua orang.
+
 ## Yang belum dikerjakan
 
 - Level 3 (ilustrasi, animasi) **ditunda** — bukan ditolak.
-- Salin `user.email` bentuk ber-ID dari Settings → Emails miliknya kalau ingin
-  commit tertaut ke profilnya.
+- Pemindahan kepemilikan spreadsheet produksi ke akun Dinda — satu-satunya
+  bagian yang masih atas nama akun lain (lihat **Kepemilikan akun**).
 
 ## Batasan yang sengaja dipilih
 
