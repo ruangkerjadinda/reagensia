@@ -1,0 +1,5 @@
+# Yang didorong ke proyek Apps Script hanyalah skrip dan manifesnya.
+# Panduan pemasangan dan catatan rumus tetap tinggal di repositori.
+**/*.md
+.clasp.json
+.claspignore

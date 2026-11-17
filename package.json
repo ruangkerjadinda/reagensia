@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "node tools/dev-server.mjs 8080",
     "check": "node tools/ci-check.mjs",
+    "accept": "node tools/acceptance.mjs",
     "verify": "node tools/verify-data.mjs",
     "snapshot": "node tools/build-snapshot.mjs",
     "mock": "node tools/mock-endpoint.mjs"

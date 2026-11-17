@@ -2,3 +2,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# clasp: id proyek skrip dan kredensial OAuth. Keduanya khas mesin/akun,
+# bukan bagian dari kode, dan .clasprc.json memang berisi token.
+apps-script/.clasp.json
+.clasp.json
+.clasprc.json
