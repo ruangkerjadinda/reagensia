@@ -8,16 +8,19 @@
  *
  * Tiga hal yang perlu diketahui sebelum memasang:
  *
- * 1. Menambah baris di tab transaksi saja TIDAK CUKUP. Di workbook ini kolom
- *    Pembelian, Distribusi, dan Pemusnahan pada Master Stok diisi manual —
- *    bukan rumus SUMIF ke tab transaksi. Karena itu setiap penulisan di sini
- *    selalu sepasang: baris transaksi ditambahkan, lalu kolom ringkasan di
- *    Master Stok ikut disesuaikan dalam satu kunci yang sama.
+ * 1. Kolom ringkasan di Master Stok sudah berupa rumus ke tab transaksi,
+ *    dipasang sendiri oleh pemilik spreadsheet. Jadi menambah baris transaksi
+ *    memang sudah cukup, dan setiap penulisan di sini MELEWATI kolom yang
+ *    berisi rumus: menimpanya dengan angka statis bukan cuma menggandakan
+ *    hitungan sekali — otomatisasi baris itu mati untuk seterusnya.
  *
- * 2. Sisa Stok seharusnya rumus =Stok Awal + Pembelian − Distribusi −
- *    Pemusnahan. Di sebagian baris rumus itu tergantikan angka ketikan. Setiap
- *    baris yang tersentuh transaksi akan dikembalikan rumusnya, dan
- *    maintenance.repairSisa memperbaiki semuanya sekaligus bila diminta.
+ * 2. Sisa Stok = Stok Awal + Pembelian + Hibah + Titipan Daerah − Distribusi −
+ *    Pemusnahan. Empat kolom masuk, bukan dua. Sel yang sudah berisi rumus
+ *    tidak pernah ditimpa; maintenance.repairSisa hanya menyentuh baris yang
+ *    nilainya diketik manual.
+ *
+ * 2b. Kategori di baris Penerimaan menentukan kolom masuk mana yang dipakai:
+ *    Hibah, Titipan Daerah, Stok Awal, atau (bawaan) Pembelian.
  *
  * 3. Token di bawah bukan pengganti pengamanan akses. Ia terkirim dari halaman
  *    dan bisa dibaca siapa pun yang membuka devtools di komputer itu. Gunanya
@@ -249,10 +252,13 @@ function masterContext() {
     lot: colOf(h, ['Kode/Lot']),
     expDate: colOf(h, ['Exp. Date', 'Exp Date', 'Expired Date']),
     merk: colOf(h, ['Merk']),
-    kategori: colOf(h, ['Kategori']),
     supplier: colOf(h, ['Supplier']),
     stokAwal: colOf(h, ['Stok Awal']),
     pembelian: colOf(h, ['Pembelian']),
+    // Dua kolom masuk tambahan. Kolom Kategori di tab Penerimaan yang
+    // menentukan qty sebuah penerimaan mendarat di kolom yang mana.
+    hibah: colOf(h, ['Hibah']),
+    titipan: colOf(h, ['Titipan Daerah']),
     distribusi: colOf(h, ['Distribusi']),
     pemusnahan: colOf(h, ['Pemusnahan']),
     sisaStok: colOf(h, ['Sisa Stok']),
@@ -260,8 +266,8 @@ function masterContext() {
     stokMin: colOf(h, ['Stok Min']),
     status: colOf(h, ['Status']),
     lokasi: colOf(h, ['Lokasi']),
-    lastUpdate: colOf(h, ['Last Update']),
     pic: colOf(h, ['PIC']),
+    peringatan: colOf(h, ['Peringatan']),
   };
 
   var required = ['kode', 'lot', 'stokAwal', 'pembelian', 'distribusi', 'pemusnahan', 'sisaStok'];
@@ -291,8 +297,33 @@ function findMasterRow(ctx, kode, lot) {
 }
 
 /**
- * Terapkan perubahan ke satu baris Master Stok: tambah kolom yang bersangkutan,
- * pulihkan rumus Sisa Stok, dan cap tanggal pembaruan.
+ * Rumus Sisa Stok untuk satu baris, disusun dari posisi kolom yang
+ * benar-benar ditemukan — bukan huruf kolom yang dihafal.
+ *
+ * Hibah dan Titipan Daerah ikut dijumlahkan kalau kolomnya ada. Melewatkan
+ * keduanya membuat setiap lot hibah langsung kelihatan "tidak cocok".
+ */
+function sisaFormula(ctx, row) {
+  var masuk = [colLetter(ctx.cols.stokAwal) + row, colLetter(ctx.cols.pembelian) + row];
+  if (ctx.cols.hibah) masuk.push(colLetter(ctx.cols.hibah) + row);
+  if (ctx.cols.titipan) masuk.push(colLetter(ctx.cols.titipan) + row);
+  return '=' + masuk.join('+')
+    + '-' + colLetter(ctx.cols.distribusi) + row
+    + '-' + colLetter(ctx.cols.pemusnahan) + row;
+}
+
+/** Kolom masuk mana yang dipakai, menurut Kategori di baris penerimaannya. */
+function kolomMasuk(kategori) {
+  var k = String(kategori || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (k === 'hibah') return 'hibah';
+  if (k === 'titipan daerah' || k === 'titipan') return 'titipan';
+  if (k === 'stok awal') return 'stokAwal';
+  return 'pembelian';
+}
+
+/**
+ * Terapkan perubahan ke satu baris Master Stok: tambah kolom yang bersangkutan
+ * dan pastikan Sisa Stok punya rumus.
  */
 function bumpMaster(ctx, row, field, delta, actor) {
   var col = ctx.cols[field];
@@ -311,16 +342,13 @@ function bumpMaster(ctx, row, field, delta, actor) {
   var pakaiRumus = String(sel.getFormula() || '') !== '';
   if (!pakaiRumus) sel.setValue(after);
 
-  // Rumus dibangun dari posisi kolom yang benar-benar ditemukan, bukan huruf
-  // yang dihafal — supaya tetap benar kalau ada kolom disisipkan.
-  var formula = '='
-    + colLetter(ctx.cols.stokAwal) + row + '+'
-    + colLetter(ctx.cols.pembelian) + row + '-'
-    + colLetter(ctx.cols.distribusi) + row + '-'
-    + colLetter(ctx.cols.pemusnahan) + row;
-  ctx.sheet.getRange(row, ctx.cols.sisaStok).setFormula(formula);
-
-  if (ctx.cols.lastUpdate) ctx.sheet.getRange(row, ctx.cols.lastUpdate).setValue(new Date());
+  // Kalau selnya SUDAH berisi rumus, jangan disentuh. Rumus milik pemilik
+  // sheet bisa berbeda bentuknya — dan lebih benar — daripada yang disusun di
+  // sini; menimpanya diam-diam mengubah angka yang dipakai mengambil keputusan
+  // tanpa ada satu pun tanda bahwa sesuatu berubah.
+  var sisaSel = ctx.sheet.getRange(row, ctx.cols.sisaStok);
+  var formula = sisaFormula(ctx, row);
+  if (String(sisaSel.getFormula() || '') === '') sisaSel.setFormula(formula);
 
   SpreadsheetApp.flush();
   var sisaAfter = num(ctx.sheet.getRange(row, ctx.cols.sisaStok).getValue());
@@ -381,7 +409,12 @@ function createPenerimaan(body) {
     linkMsds: colOf(h, ['Link MSDS']),
     statusCoa: colOf(h, ['Status COA']),
     statusMsds: colOf(h, ['Status MSDS']),
-    ket: colOf(h, ['Ket', 'Keterangan']),
+    ket: colOf(h, ['Catatan', 'Ket', 'Keterangan']),
+    suhuSimpan: colOf(h, ['Suhu Simpan']),
+    lokasiSimpan: colOf(h, ['Lokasi Simpan']),
+    kondisiKemasan: colOf(h, ['Kondisi Kemasan']),
+    statusPenerimaan: colOf(h, ['Status Penerimaan']),
+    kodeBmn: colOf(h, ['KODE BMN', 'Kode BMN', 'BMN']),
   };
 
   var row = nextRow(sheet, header.row, cols.kode || cols.instalasi);
@@ -404,6 +437,14 @@ function createPenerimaan(body) {
   values[cols.statusCoa] = p.linkCoa ? 'AVAILABLE' : 'NOT AVAILABLE';
   values[cols.statusMsds] = p.linkMsds ? 'AVAILABLE' : 'NOT AVAILABLE';
   values[cols.ket] = p.ket || '';
+  // Kolom yang tidak ada di sheet datang sebagai 0 dan dilewati writeRow, tapi
+  // menulis semuanya ke values[0] membuat nilainya saling menimpa tanpa jejak —
+  // jadi yang kosong tidak usah disetel sama sekali.
+  if (cols.suhuSimpan) values[cols.suhuSimpan] = p.suhuSimpan || '';
+  if (cols.lokasiSimpan) values[cols.lokasiSimpan] = p.lokasiSimpan || '';
+  if (cols.kondisiKemasan) values[cols.kondisiKemasan] = p.kondisiKemasan || '';
+  if (cols.statusPenerimaan) values[cols.statusPenerimaan] = p.statusPenerimaan || 'DITERIMA';
+  if (cols.kodeBmn) values[cols.kodeBmn] = p.kodeBmn || '';
 
   writeRow(sheet, row, values);
 
@@ -412,9 +453,12 @@ function createPenerimaan(body) {
   var master;
 
   if (masterRow) {
-    // Lot sudah ada: penambahan masuk ke kolom Pembelian, bukan Stok Awal —
-    // Stok Awal adalah saldo pembuka dan tidak boleh berubah lagi.
-    master = bumpMaster(ctx, masterRow, 'pembelian', qty, body.actor);
+    // Kategori penerimaannya yang menentukan kolom masuk mana yang bertambah —
+    // Hibah, Titipan Daerah, Stok Awal, atau Pembelian. Kalau kolom itu sudah
+    // berisi SUMIFS, bumpMaster membiarkannya dan rumusnya yang menghitung.
+    var fieldMasuk = kolomMasuk(p.kategori);
+    if (!ctx.cols[fieldMasuk]) fieldMasuk = 'pembelian';
+    master = bumpMaster(ctx, masterRow, fieldMasuk, qty, body.actor);
   } else {
     master = createMasterRow(ctx, p, qty);
   }
@@ -435,22 +479,25 @@ function createMasterRow(ctx, p, qty) {
   values[ctx.cols.lot] = p.lot || '';
   values[ctx.cols.expDate] = exp;
   values[ctx.cols.merk] = p.merk || '';
-  values[ctx.cols.kategori] = p.kategori || '';
   values[ctx.cols.supplier] = p.supplier || '';
   // Kalau Master Stok sudah memakai rumus, saldo pembuka lot baru adalah 0 dan
   // qty-nya masuk lewat SUMIFS ke baris Penerimaan yang barusan ditulis —
   // menaruhnya di Stok Awal juga akan menghitungnya dua kali.
   var barisRumus = barisRumusMaster_(ctx);
 
-  values[ctx.cols.stokAwal] = barisRumus ? 0 : qty;
-  values[ctx.cols.pembelian] = 0;
+  var fieldMasuk = kolomMasuk(p.kategori);
+  if (!ctx.cols[fieldMasuk]) fieldMasuk = 'pembelian';
+
+  values[ctx.cols.stokAwal] = !barisRumus && fieldMasuk === 'stokAwal' ? qty : 0;
+  values[ctx.cols.pembelian] = !barisRumus && fieldMasuk === 'pembelian' ? qty : 0;
+  if (ctx.cols.hibah) values[ctx.cols.hibah] = !barisRumus && fieldMasuk === 'hibah' ? qty : 0;
+  if (ctx.cols.titipan) values[ctx.cols.titipan] = !barisRumus && fieldMasuk === 'titipan' ? qty : 0;
   values[ctx.cols.distribusi] = 0;
   values[ctx.cols.pemusnahan] = 0;
   values[ctx.cols.unit] = p.unit;
   values[ctx.cols.stokMin] = p.stokMin === undefined ? 1 : num(p.stokMin);
   values[ctx.cols.status] = exp && exp < new Date() ? 'TIDAK AKTIF' : 'AKTIF';
   values[ctx.cols.lokasi] = p.lokasi || '';
-  values[ctx.cols.lastUpdate] = new Date();
   values[ctx.cols.pic] = p.pic || '';
 
   writeRow(ctx.sheet, row, values);
@@ -461,19 +508,14 @@ function createMasterRow(ctx, p, qty) {
     // yang menentukan bentuk rumusnya (Formulas.gs).
     salinRumusMaster_(ctx, barisRumus, row);
   } else {
-    var formula = '='
-      + colLetter(ctx.cols.stokAwal) + row + '+'
-      + colLetter(ctx.cols.pembelian) + row + '-'
-      + colLetter(ctx.cols.distribusi) + row + '-'
-      + colLetter(ctx.cols.pemusnahan) + row;
-    ctx.sheet.getRange(row, ctx.cols.sisaStok).setFormula(formula);
+    ctx.sheet.getRange(row, ctx.cols.sisaStok).setFormula(sisaFormula(ctx, row));
   }
   SpreadsheetApp.flush();
 
   return {
     row: row,
     created: true,
-    field: barisRumus ? 'pembelian' : 'stokAwal',
+    field: fieldMasuk,
     before: 0,
     after: qty,
     sisaBefore: 0,
@@ -551,35 +593,37 @@ function createOutbound(body, kind) {
     kategori: colOf(h, ['Kategori']),
     supplier: colOf(h, ['Supplier']),
     qty: colOf(h, isDisposal ? ['Qty'] : ['Qty Keluar', 'Qty']),
+    // Tab Pemusnahan tidak punya kolom Kode maupun Unit; keduanya datang
+    // sebagai 0 dan dilewati. Barisnya tetap bisa dikunci ke Master Stok lewat
+    // Nama Reagen + Kode/Lot, cara yang sama yang dipakai dashboard.
     unit: colOf(h, ['Unit']),
-    ket: colOf(h, ['Ket', 'Keterangan']),
+    ket: colOf(h, ['Ket', 'Keterangan', 'Catatan']),
   };
 
   var row = nextRow(sheet, header.row, cols.kode || cols.instalasi);
   var values = {};
   values[cols.no] = nextNumber(sheet, header.row, cols.no, row);
   values[cols.instalasi] = p.instalasi;
-  values[cols.kode] = p.kode;
+  if (cols.kode) values[cols.kode] = p.kode;
   values[cols.tanggal] = parseDate(p.tanggal);
   values[cols.nama] = p.nama;
   values[cols.lot] = p.lot;
   values[cols.expDate] = parseDate(p.expDate);
   values[cols.merk] = p.merk || '';
-  values[cols.kategori] = p.kategori || '';
+  if (cols.kategori) values[cols.kategori] = p.kategori || '';
   values[cols.supplier] = p.supplier || '';
   values[cols.qty] = qty;
-  values[cols.unit] = p.unit;
+  if (cols.unit) values[cols.unit] = p.unit;
   values[cols.ket] = p.ket || '';
 
+  // Setiap kolom opsional diperiksa dulu: kalau tidak ada, indeksnya 0 dan
+  // semua nilai akan saling menimpa di values[0] sebelum dibuang diam-diam.
   if (isDisposal) {
-    values[colOf(h, ['Alasan Musnah'])] = p.alasan;
-    values[colOf(h, ['Metode Pemusnahan'])] = p.metode;
-    values[colOf(h, ['PIC'])] = p.pic;
-    values[colOf(h, ['Lokasi'])] = p.lokasi || '';
+    setIfCol(values, colOf(h, ['Alasan Musnah']), p.alasan);
+    setIfCol(values, colOf(h, ['PIC']), p.pic);
   } else {
-    values[colOf(h, ['Periode Pakai'])] = p.periodePakai || '';
-    values[colOf(h, ['PIC Pengirim'])] = p.picPengirim;
-    values[colOf(h, ['PIC Penerima'])] = p.picPenerima;
+    setIfCol(values, colOf(h, ['PIC Pengirim']), p.picPengirim);
+    setIfCol(values, colOf(h, ['PIC Penerima']), p.picPenerima);
   }
 
   writeRow(sheet, row, values);
@@ -593,6 +637,11 @@ function createOutbound(body, kind) {
   }
 
   return { tab: sheet.getName(), row: row, master: master };
+}
+
+/** Setel nilai hanya kalau kolomnya benar-benar ada di sheet. */
+function setIfCol(values, col, value) {
+  if (col) values[col] = value === undefined || value === null ? '' : value;
 }
 
 /** Tulis sekali jalan; kolom yang tidak ada di sheet (index 0) dilewati. */
@@ -637,6 +686,8 @@ function repairSisa(body) {
   var kodes = ctx.sheet.getRange(start, ctx.cols.kode, count, 1).getValues();
   var awal = ctx.sheet.getRange(start, ctx.cols.stokAwal, count, 1).getValues();
   var beli = ctx.sheet.getRange(start, ctx.cols.pembelian, count, 1).getValues();
+  var hibah = ctx.cols.hibah ? ctx.sheet.getRange(start, ctx.cols.hibah, count, 1).getValues() : null;
+  var titipan = ctx.cols.titipan ? ctx.sheet.getRange(start, ctx.cols.titipan, count, 1).getValues() : null;
   var dist = ctx.sheet.getRange(start, ctx.cols.distribusi, count, 1).getValues();
   var musnah = ctx.sheet.getRange(start, ctx.cols.pemusnahan, count, 1).getValues();
 
@@ -645,7 +696,10 @@ function repairSisa(body) {
     var row = start + i;
     if (formulas[i][0]) continue; // sudah rumus
     if (!kodes[i][0]) continue; // baris kosong atau baris total
-    var computed = num(awal[i][0]) + num(beli[i][0]) - num(dist[i][0]) - num(musnah[i][0]);
+    var computed = num(awal[i][0]) + num(beli[i][0])
+      + (hibah ? num(hibah[i][0]) : 0)
+      + (titipan ? num(titipan[i][0]) : 0)
+      - num(dist[i][0]) - num(musnah[i][0]);
     rows.push({
       row: row,
       kode: String(kodes[i][0]),
@@ -659,11 +713,7 @@ function repairSisa(body) {
 
   for (var j = 0; j < rows.length; j++) {
     var r = rows[j].row;
-    ctx.sheet.getRange(r, ctx.cols.sisaStok).setFormula('='
-      + colLetter(ctx.cols.stokAwal) + r + '+'
-      + colLetter(ctx.cols.pembelian) + r + '-'
-      + colLetter(ctx.cols.distribusi) + r + '-'
-      + colLetter(ctx.cols.pemusnahan) + r);
+    ctx.sheet.getRange(r, ctx.cols.sisaStok).setFormula(sisaFormula(ctx, r));
   }
   SpreadsheetApp.flush();
 

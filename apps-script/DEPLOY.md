@@ -116,19 +116,27 @@ asli, lalu ganti URL di Pengaturan dashboard dengan URL deployment yang baru.
 
 ## Yang dilakukan skrip ini
 
-**Setiap penulisan selalu sepasang.** Di workbook ini kolom Pembelian,
-Distribusi, dan Pemusnahan pada Master Stok **diisi manual** — bukan rumus
-`SUMIF` ke tab transaksi. Kalau skrip hanya menambah baris di tab transaksi,
-angka di Master Stok akan mulai menyimpang dari catatan transaksinya. Karena itu
-setiap aksi menambah baris **dan** menyesuaikan kolom ringkasannya, di dalam satu
-`LockService` yang sama sehingga dua orang yang menyimpan bersamaan tidak saling
-menimpa.
+**Kolom yang berisi rumus tidak pernah ditimpa.** Kolom ringkasan di Master
+Stok (Pembelian, Hibah, Titipan Daerah, Distribusi, Pemusnahan) sudah berupa
+rumus ke tab transaksi, dipasang sendiri oleh pemilik spreadsheet. Jadi
+menambah baris transaksi memang sudah cukup, dan skrip ini sengaja **melewati**
+kolom yang berisi rumus: menimpanya dengan angka statis bukan cuma
+menggandakan hitungan sekali — otomatisasi baris itu mati untuk seterusnya,
+dan tidak ada yang kelihatan salah. Kalau suatu saat rumusnya dicopot, skrip
+kembali menyesuaikan kolomnya sendiri, di dalam satu `LockService` yang sama
+sehingga dua orang yang menyimpan bersamaan tidak saling menimpa.
 
-**Rumus Sisa Stok dipulihkan sambil jalan.** Setiap baris Master Stok yang
-tersentuh transaksi dikembalikan rumusnya ke
-`=Stok Awal + Pembelian − Distribusi − Pemusnahan`. Untuk memperbaiki semuanya
-sekaligus, gunakan tombol di Pengaturan → Pemeliharaan (jalankan **Uji coba**
-dulu untuk melihat baris mana yang akan berubah).
+**Kategori menentukan kolom masuknya.** Baris Penerimaan dengan Kategori
+`Hibah` menambah kolom Hibah, `Titipan Daerah` menambah Titipan Daerah, `Stok
+Awal` menambah Stok Awal, selebihnya masuk ke Pembelian.
+
+**Rumus Sisa Stok hanya dipasang kalau belum ada.** Bentuknya
+`=Stok Awal + Pembelian + Hibah + Titipan Daerah − Distribusi − Pemusnahan`
+— empat kolom masuk, bukan dua. Sel yang sudah berisi rumus dibiarkan apa
+adanya, karena rumus milik pemilik sheet bisa berbeda bentuknya dan lebih
+benar. Untuk memperbaiki baris yang nilainya diketik manual, gunakan tombol di
+Pengaturan → Pemeliharaan (jalankan **Uji coba** dulu untuk melihat baris mana
+yang akan berubah).
 
 **Kiriman ganda ditolak.** Dashboard mengirim `requestId` unik per penyimpanan;
 skrip mengingatnya selama 6 jam. Klik dobel atau kirim ulang setelah jaringan

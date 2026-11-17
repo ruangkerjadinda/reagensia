@@ -65,9 +65,26 @@ export const TAB_GIDS = {
 
 const STORAGE_KEY = 'reagensia:settings:v1';
 
+/**
+ * Pengaturan yang TIDAK boleh ditimpa dari peramban.
+ *
+ * Sumber datanya satu, dipakai bersama, dan dipakai untuk mengambil keputusan —
+ * jadi penentuan workbook mana yang dibaca hanya ada di DEFAULTS di berkas ini,
+ * dan mengubahnya berarti mengubah kode lalu mendorongnya ke repositori. Tidak
+ * ada jalan lewat halaman Pengaturan, dan nilai lama yang mungkin tersimpan di
+ * localStorage seseorang pun diabaikan, bukan sekadar tidak ditampilkan.
+ */
+const FIXED_KEYS = ['spreadsheetId'];
+
+function dropFixed(stored) {
+  const out = { ...stored };
+  for (const key of FIXED_KEYS) delete out[key];
+  return out;
+}
+
 function readStored() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    return dropFixed(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
   } catch {
     return {};
   }
@@ -86,7 +103,7 @@ function deepMerge(base, patch) {
 export const CONFIG = deepMerge(DEFAULTS, readStored());
 
 export function saveSettings(patch) {
-  const merged = deepMerge(readStored(), patch);
+  const merged = dropFixed(deepMerge(readStored(), patch));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   Object.assign(CONFIG, deepMerge(DEFAULTS, merged));
   return CONFIG;

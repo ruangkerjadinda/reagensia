@@ -91,11 +91,16 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
     `Master Reagen` yang tidak ada. Halaman Kartu Stok membangun ulang kartunya
     dari tab transaksi, bukan membaca tab itu.
 
-11. **`apps-script/Code.gs` belum disesuaikan ke susunan baru ini.** Mode input
-    masih mati (endpoint kosong), jadi tidak ada yang rusak sekarang, tapi
-    `colOf()` di sana mencari kolom `Kategori` di Master Stok dan `Metode
-    Pemusnahan`/`Periode Pakai` yang sudah tidak ada — kalau dipasang apa adanya,
-    ia akan melempar error. Ini pekerjaan tersendiri sebelum mode input dipakai.
+11. **`apps-script/Code.gs` sudah disesuaikan ke susunan baru ini** (17 Nov
+    2026). Yang paling berbahaya sebelumnya bukan error, melainkan diamnya:
+    `colOf()` mengembalikan 0 untuk kolom yang hilang dan `writeRow` melewati
+    indeks 0, jadi nilainya hilang tanpa suara — dan `bumpMaster()` menimpa
+    rumus Sisa Stok milik pemilik sheet dengan rumus dua-kolom-masuk setiap
+    kali menulis. Sekarang: `sisaFormula()` menyusun rumus empat kolom masuk,
+    sel yang sudah berisi rumus tidak pernah ditimpa, `kolomMasuk()` memilih
+    kolom menurut Kategori, dan kolom opsional dijaga `setIfCol()`.
+    **Masih belum diuji di salinan workbook** — itu langkah berikutnya sebelum
+    mode input dipakai sungguhan.
 
 ## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
 
@@ -285,6 +290,15 @@ Semua path di aplikasi relatif, jadi jalan sama saja di akar domain maupun di
 - Dialog konfirmasi sebelum menulis menuliskan **persis baris yang ditambahkan
   dan akibatnya di Master Stok** ("Sisa Stok 9 → 8"). Yang ditulis adalah
   inventaris yang dipakai orang lain; "Anda yakin?" saja tidak cukup.
+- **`spreadsheetId` tidak bisa diubah dari dashboard.** Ia ada di `FIXED_KEYS`
+  (`js/config.js`): nilai yang tersimpan di localStorage diabaikan saat dibaca
+  *dan* dibuang saat penyimpanan berikutnya, jadi satu-satunya cara mengganti
+  sumber data adalah mengubah berkas itu lalu mendorongnya ke repositori. Ini
+  disengaja — angkanya dipakai banyak orang untuk mengambil keputusan, dan
+  "sumber datanya ternyata bukan yang itu" adalah kegagalan yang tidak
+  kelihatan. Halaman Pengaturan memang tidak pernah punya kolom isian untuk
+  ini; yang baru adalah jaminannya.
+
 - Kartu Stok punya **dua tata letak terpisah**: yang di layar (kartu + tabel
   mutasi lengkap dengan nomor baris sheet) dan yang dicetak (`printCard()` di
   `js/pages/kartustok.js`, gaya `.kartu-cetak*` di `css/print.css`). Yang
