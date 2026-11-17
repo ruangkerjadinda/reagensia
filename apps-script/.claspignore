@@ -3,3 +3,17 @@
 **/*.md
 .clasp.json
 .claspignore
+
+# Formulas.gs TIDAK didorong — dengan sengaja.
+#
+# Ia memasang SUMIFS di Master Stok dan menolkan Stok Awal, karena waktu
+# ditulis ketiga kolom itu memang diisi tangan. Sekarang tidak lagi: seluruh
+# Master Stok sudah berupa rumus milik pemilik spreadsheet (lihat catatan 11 di
+# CLAUDE.md), dan menjalankan pasangRumus() di sana akan menimpa rumusnya
+# sendiri dengan versi kita yang premisnya sudah kedaluwarsa.
+#
+# Berkasnya tetap di repositori sebagai catatan bentuk rumusnya (bersama
+# RUMUS.md), tapi tidak ikut terpasang — supaya tidak pernah muncul di daftar
+# fungsi yang bisa diklik Run di proyek yang punya izin tulis ke inventaris
+# sungguhan.
+Formulas.gs

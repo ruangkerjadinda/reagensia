@@ -25,26 +25,57 @@ Sheets.
 
 ---
 
-## 1. Tempel kodenya
+## 1. Buat proyeknya — **mandiri**, bukan di dalam spreadsheet
 
-1. Buka spreadsheet (salinan uji coba lebih dulu).
-2. **Extensions → Apps Script**.
-3. Hapus isi `Code.gs` bawaan, tempel seluruh isi berkas `Code.gs` dari folder
+> **Jangan lewat Extensions → Apps Script.** Di workbook MONITORING REAGENSIA
+> sudah ada skrip terikat milik orang lain ("V2.6" / LIMS Lite) yang juga
+> mendefinisikan `doGet` dan `doPost`. Apps Script menaruh semua berkas dalam
+> satu proyek ke **satu ruang nama global**, jadi menempelkan `Code.gs` di
+> sebelahnya membuat salah satu `doPost` menang tanpa suara dan yang lain
+> lenyap — tanpa galat, tanpa peringatan. Proyek mandiri tidak berbagi ruang
+> nama dengan siapa pun, dan skrip yang sudah ada di sana tidak tersentuh
+> sama sekali.
+
+1. Buka **[script.google.com](https://script.google.com)** → **New project**.
+2. Hapus isi `Code.gs` bawaan, tempel seluruh isi berkas `Code.gs` dari folder
    ini.
+3. Beri nama proyeknya, misalnya `Reagensia writer`.
 4. **Simpan** (ikon disket atau Ctrl+S).
 
-## 2. Pasang token
+`Formulas.gs` **tidak ikut dipasang.** Ia menulis ulang rumus Master Stok
+dengan premis yang sudah kedaluwarsa (lihat catatan di kepala berkasnya).
 
-Token menahan penulisan iseng dari luar. Buat teks acak yang panjang — dan
-**jangan pakai ulang kata sandi apa pun**, karena token ini terkirim dari
-halaman dan bisa dibaca siapa saja yang membuka devtools di komputer pengguna.
-Fungsinya bukan pengamanan sekuat kata sandi, melainkan penghalang sederhana.
+## 2. Pasang dua Script Properties
+
+Proyek mandiri tidak tahu sendiri workbook mana yang dilayaninya, dan token
+menahan penulisan iseng dari luar.
 
 1. Di editor Apps Script: **Project Settings** (ikon roda gigi kiri).
-2. Gulir ke **Script Properties → Add script property**.
-3. Property: `API_TOKEN`
-4. Value: teks acak, misalnya `rgn-7Kq2xP9mLd4vWn8sTb3h`
-5. **Save script properties**.
+2. Gulir ke **Script Properties → Add script property**, isi **dua** baris:
+
+| Property | Value |
+|---|---|
+| `SPREADSHEET_ID` | `1KBrL4OB_ub_ie7OCIFTGcd-gIY0hy8ApiTGnIyQTu7k` — atau, selama uji coba, id **salinan**-nya |
+| `API_TOKEN` | teks acak yang panjang, misalnya `rgn-7Kq2xP9mLd4vWn8sTb3h` |
+
+3. **Save script properties**.
+
+Id workbook adalah bagian tengah URL-nya:
+`docs.google.com/spreadsheets/d/`**`<id ini>`**`/edit`.
+
+**Jangan pakai ulang kata sandi apa pun sebagai token.** Ia terkirim dari
+halaman dan bisa dibaca siapa saja yang membuka devtools di komputer pengguna;
+fungsinya penghalang sederhana, bukan pengamanan sekuat kata sandi.
+
+Salah isi `SPREADSHEET_ID` tidak berbahaya: id yang tidak bisa dibuka membuat
+skrip menolak jalan dengan pesan yang jelas, dan id workbook **lain** yang
+valid ketahuan di langkah 5 — dashboard mencocokkannya dan mematikan mode
+input sampai keduanya sama.
+
+> **Kalau lebih suka terikat ke spreadsheet** (misalnya di workbook yang tidak
+> punya skrip lain): buat proyeknya lewat **Extensions → Apps Script** dan
+> kosongkan saja `SPREADSHEET_ID`. Skrip jatuh ke `getActive()` sendiri.
+> Selebihnya sama persis.
 
 ## 3. Periksa kolomnya ketemu
 
@@ -56,6 +87,8 @@ Sebelum di-deploy, pastikan skrip mengenali struktur sheet ini.
    Advanced → Go to … → Allow**). Ini normal: skrip memang perlu izin menulis ke
    spreadsheet ini.
 4. Buka **Execution log**. Yang harus terlihat:
+   - `"pemasangan": "mandiri"` dan `spreadsheetName` yang **benar** — ini
+     pemeriksaan pertama bahwa `SPREADSHEET_ID` menunjuk workbook yang dimaksud
    - `"token": "terpasang"`
    - `master.cols` berisi angka untuk semua kolom (tidak boleh ada yang `0`)
    - `tabs` berisi tiga tab dengan `headerRow` masing-masing
@@ -86,8 +119,17 @@ Perbaiki judulnya di sheet, atau tambahkan nama alternatifnya di fungsi
 3. Tempel token yang sama persis ke **Token**.
 4. Isi **Nama PIC** — nama ini ikut tercatat di kolom PIC dan di tab Log.
 5. Klik **Simpan**, lalu **Uji koneksi**. Kalau berhasil, muncul pesan
-   "Endpoint menjawab" beserta nomor versi.
+   "Endpoint menjawab" beserta nomor versi dan **nama workbook** yang ditulisi.
+   Cocokkan namanya.
 6. Nyalakan sakelar **Nyalakan mode input**.
+
+Kalau yang muncul justru peringatan merah **"Endpoint ini menulis ke workbook
+yang berbeda"**, `SPREADSHEET_ID` di Script Properties menunjuk workbook lain
+daripada yang dibaca dashboard. Sakelar mode input ikut dimatikan dan tetap
+terkunci sampai keduanya cocok — perbaiki property-nya, lalu tekan **Uji
+koneksi** lagi. Peringatan ini sengaja tidak bisa dilewati: angka dibaca dari
+satu workbook dan transaksi ditulis ke workbook lain adalah kegagalan yang
+tidak kelihatan di mana pun.
 
 Tombol "+ Tambah …" akan muncul di halaman Transaksi.
 
@@ -122,15 +164,20 @@ di spreadsheet.
 | 9 | Distribusikan sampai sisa nol | **Sisa Stok** jadi 0 dan kolom **Status** masih berupa rumus. Status di workbook ini adalah rumus tanggal kedaluwarsa — `TIDAK AKTIF` di sana berarti lewat exp date, bukan stok habis — jadi yang salah justru kalau ia tertulis sebagai teks. Lot habis ditandai dashboard sendiri, dari Sisa Stok |
 
 Kesembilan langkah ini **lulus di salinan pada 17 Nov 2026**, tiga kali
-berturut-turut.
+berturut-turut, lewat jalur mandiri (`SPREADSHEET_ID`) — jalur yang sama yang
+dipakai di workbook asli.
 
-Kalau kesembilan langkah lulus, ulangi langkah 1–4 pemasangan di spreadsheet
-asli, lalu ganti URL di Pengaturan dashboard dengan URL deployment yang baru.
+Kalau kesembilan langkah lulus, pindahkan proyek yang **sama** ke workbook
+asli: cukup ganti `SPREADSHEET_ID` di Script Properties dengan id workbook
+asli, lalu **Deploy → Manage deployments → Edit → Version: New version →
+Deploy**. Tidak perlu menempel ulang kodenya, dan URL `/exec`-nya tidak
+berubah.
 
-> **Di workbook asli sudah ada skrip terikat milik orang lain** ("V2.6" /
-> LIMS Lite, ikut tersalin ke setiap salinan). Jangan hapus isinya untuk
-> ditimpa — tambahkan `Code.gs` sebagai berkas baru di proyek yang sama, atau
-> pastikan dulu skrip itu memang tidak dipakai.
+> Kalau lebih suka proyek uji dan proyek produksi benar-benar terpisah, buat
+> proyek baru dengan langkah 1–4 dan ganti URL di Pengaturan dashboard. Yang
+> penting hanya satu: **jangan** memasangnya lewat Extensions → Apps Script di
+> workbook asli, karena skrip "V2.6" / LIMS Lite yang sudah ada di sana
+> mendefinisikan `doGet` dan `doPost` yang sama.
 
 ---
 
@@ -192,6 +239,9 @@ ringkasan. Koreksi dan pembatalan tetap dilakukan manual di Google Sheets.
 | "Token ditolak" | `API_TOKEN` di Script Properties berbeda dengan yang diisi di Pengaturan (perhatikan spasi di ujung) |
 | "Kolom … tidak ditemukan di Master Stok" | Judul kolom di sheet diganti. Jalankan `selfTest` untuk melihat mana yang hilang |
 | "Endpoint tidak bisa dihubungi" | URL salah, atau deployment sudah dihapus/diganti |
+| "SPREADSHEET_ID … tidak bisa dibuka" | Id-nya salah ketik, atau akun yang men-deploy tidak punya akses **edit** ke workbook itu |
+| "Endpoint ini menulis ke workbook yang berbeda" | `SPREADSHEET_ID` menunjuk workbook lain daripada yang dibaca dashboard. Perbaiki property-nya, lalu **Uji koneksi** lagi |
+| "Skrip ini tidak terikat ke spreadsheet mana pun" | Proyek mandiri tanpa `SPREADSHEET_ID`. Isi property-nya (langkah 2) |
 | "Ada penulisan lain yang sedang berjalan" | Dua orang menyimpan bersamaan. Tunggu sebentar dan ulangi — ini justru tanda penguncian bekerja |
 | Perubahan kode tidak terasa | Setiap kali `Code.gs` diubah, harus **Deploy → Manage deployments → Edit → Version: New version → Deploy**. Menyimpan saja tidak cukup |
 

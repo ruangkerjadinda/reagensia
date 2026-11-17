@@ -147,6 +147,16 @@ export function render({ data, summary, rerender }) {
   return page;
 }
 
+/**
+ * Terisi kalau "Uji koneksi" terakhir menemukan endpoint yang menulis ke
+ * workbook lain. Disimpan di luar render supaya peringatannya tidak hilang
+ * begitu kartunya digambar ulang — dan selama ia terisi, sakelar mode input
+ * dimatikan. Peringatan yang bisa diabaikan tidak cukup di sini: akibatnya
+ * adalah transaksi tercatat di workbook yang tidak dibaca siapa pun, tanpa
+ * satu pun galat yang kelihatan.
+ */
+let bedaWorkbook = null;
+
 function writeCard(rerender) {
   const urlInput = el('input.input', {
     type: 'url',
@@ -168,7 +178,7 @@ function writeCard(rerender) {
     el('input', {
       type: 'checkbox',
       checked: CONFIG.writeEnabled,
-      disabled: !CONFIG.endpoint.url,
+      disabled: !CONFIG.endpoint.url || !!bedaWorkbook,
       onchange: (e) => {
         saveSettings({ writeEnabled: e.target.checked });
         renderStatus();
@@ -180,6 +190,15 @@ function writeCard(rerender) {
 
   return el('section.card', {},
     cardHead('Mode input', 'Menambah baris ke spreadsheet dari dashboard', status),
+
+    bedaWorkbook ? notice({
+      tone: 'danger',
+      icon: 'alert',
+      title: 'Endpoint ini menulis ke workbook yang berbeda',
+      body: `Halaman ini membaca ${bedaWorkbook.dibaca}, tetapi endpoint menulis ke ${bedaWorkbook.ditulis}`
+        + `${bedaWorkbook.nama ? ` ("${bedaWorkbook.nama}")` : ''}. Perbaiki SPREADSHEET_ID di Script Properties `
+        + 'proyek Apps Script itu, lalu tekan "Uji koneksi" lagi. Mode input dimatikan sampai keduanya cocok.',
+    }) : null,
 
     notice({
       tone: 'info',
@@ -219,7 +238,43 @@ function writeCard(rerender) {
           saveSettings({ endpoint: { url: urlInput.value.trim(), token: tokenInput.value.trim() } });
           try {
             const res = await ping();
-            toast('Endpoint menjawab', { tone: 'ok', detail: `Versi ${res.version || '?'} · tab terbaca: ${(res.sheets || []).join(', ') || '—'}` });
+
+            // Endpoint-nya punya tujuan tulis sendiri: proyek mandiri membuka
+            // workbook lewat SPREADSHEET_ID di Script Properties-nya, dan tidak
+            // ada yang menjamin itu workbook yang sedang dibaca halaman ini.
+            // Satu id yang salah di situ berarti angka dibaca dari satu
+            // workbook dan transaksi ditulis ke workbook lain — tanpa satu pun
+            // galat. Jadi id-nya dicocokkan di sini, satu-satunya tempat kedua
+            // nilainya pernah bertemu.
+            if (res.spreadsheetId && res.spreadsheetId !== CONFIG.spreadsheetId) {
+              bedaWorkbook = {
+                dibaca: CONFIG.spreadsheetId,
+                ditulis: res.spreadsheetId,
+                nama: res.spreadsheetName || '',
+              };
+              saveSettings({ writeEnabled: false });
+              toast('Endpoint menulis ke workbook yang BERBEDA', {
+                tone: 'danger',
+                timeout: 14000,
+                detail: 'Mode input dimatikan. Keterangannya ada di kartu ini.',
+              });
+              renderStatus();
+              rerender();
+              return;
+            }
+
+            const pulih = !!bedaWorkbook; // sakelarnya sedang dimatikan peringatan
+            bedaWorkbook = null;
+            if (pulih) rerender();
+
+            const tujuan = res.spreadsheetName
+              ? `menulis ke "${res.spreadsheetName}"`
+              : `tab terbaca: ${(res.sheets || []).join(', ') || '—'}`;
+            toast('Endpoint menjawab', {
+              tone: 'ok',
+              detail: `Versi ${res.version || '?'} · ${tujuan}`
+                + (res.spreadsheetId ? ' · workbook-nya cocok dengan yang dibaca halaman ini' : ''),
+            });
           } catch (err) {
             toast('Endpoint tidak menjawab', { tone: 'danger', detail: err.message, timeout: 10000 });
           }

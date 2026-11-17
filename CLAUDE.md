@@ -157,8 +157,8 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
     Yang masih tertinggal: `metode` dan `lokasi` di form pemusnahan dihapus
     karena tab Pemusnahan tidak punya kolomnya (`setIfCol` akan mengisinya
     sendiri kalau kolomnya ditambahkan), dan **mode input belum pernah dipasang
-    di workbook asli** — di sana sudah ada skrip terikat milik orang lain
-    ("V2.6" / LIMS Lite) yang tidak boleh ditimpa.
+    di workbook asli** — langkahnya ada di `apps-script/DEPLOY.md`, dan yang
+    memasang adalah pemilik spreadsheet.
 
 ## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
 
@@ -288,9 +288,37 @@ Salinan uji: `SALINAN UJI — Reagensia`
 `clasp` dari folder `apps-script/` (`.clasp.json` sengaja tidak masuk repo).
 
 `apps-script/DEPLOY.md` memuat langkah pemasangan serta daftar uji terima. Yang
-memasang di workbook asli adalah pemilik spreadsheet, bukan kita — dan di sana
-**sudah ada skrip terikat milik orang lain** ("V2.6" / LIMS Lite) yang tidak
-boleh ditimpa begitu saja.
+memasang di workbook asli adalah pemilik spreadsheet, bukan kita.
+
+**Pemasangannya mandiri, bukan terikat** — ini bukan selera. Di workbook asli
+sudah ada skrip terikat milik orang lain ("V2.6" / LIMS Lite, ikut tersalin ke
+setiap salinan) yang juga mendefinisikan `doGet` dan `doPost`. Apps Script
+menaruh semua berkas satu proyek ke **satu ruang nama global**, jadi
+menempelkan `Code.gs` di sebelahnya membuat salah satu `doPost` menang tanpa
+suara. Skrip itu pun sudah usang: `SPREADSHEET_ID`-nya menunjuk `MONITORING
+REAGENSIA 1` (Juni 2026), bukan workbook yang dipakai sekarang.
+
+Karena itu `book()` di `Code.gs` adalah satu-satunya pintu ke spreadsheet:
+ia membuka `SPREADSHEET_ID` dari Script Properties kalau ada, dan jatuh ke
+`getActive()` kalau kosong — **satu berkas yang sama jalan di kedua cara
+pemasangan**, dan itulah yang membuat salinan bisa diuji sebelum workbook asli
+disentuh. Kesembilan uji terima lulus lewat jalur mandiri, tiga kali
+berturut-turut (17 Nov 2026), jadi `openById()` + `flush()` + spill `UNIQUE()`
++ `PASTE_FORMULA` memang bekerja tanpa terikat.
+
+Konsekuensinya ada sumber kebenaran kedua: `SPREADSHEET_ID` milik endpoint.
+Id yang tidak bisa dibuka gagal berisik, tapi id workbook **lain** yang valid
+tidak — angka dibaca dari satu workbook, transaksi ditulis ke workbook lain,
+tanpa satu pun galat. Jadi `ping` mengembalikan `spreadsheetId` dan
+`spreadsheetName`, dan halaman Pengaturan mencocokkannya dengan
+`CONFIG.spreadsheetId`: kalau berbeda ia memasang peringatan merah yang
+menetap **dan mengunci sakelar mode input** sampai keduanya sama. Jangan
+diturunkan jadi toast biasa.
+
+`Formulas.gs` ada di `.claspignore` dan **tidak ikut terpasang**: ia memasang
+SUMIFS di Master Stok dan menolkan Stok Awal dengan premis yang sudah
+kedaluwarsa (catatan 11), jadi menjalankannya akan menimpa rumus milik Dinda.
+Berkasnya tetap di repo sebagai catatan bentuk rumusnya.
 
 Untuk menguji alur formnya tanpa menyentuh spreadsheet mana pun:
 `npm run mock` (token `rahasia-uji`), lalu isi halaman Pengaturan dengan

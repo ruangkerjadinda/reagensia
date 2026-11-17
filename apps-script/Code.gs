@@ -44,13 +44,31 @@ var IDEMPOTENCY_TTL_SECONDS = 21600; // 6 jam
 
 /* ------------------------------------------------------------------ masuk */
 
+/**
+ * Dibuka di peramban, inilah hal pertama yang dilihat orang yang memasang —
+ * jadi ia harus bisa menjawab "sudah tersambung ke workbook yang mana?" dan
+ * mengeluh dengan jelas kalau belum, bukan melempar halaman galat Google.
+ */
 function doGet(e) {
-  return json({
-    ok: true,
-    version: VERSION,
-    message: 'Reagensia writer aktif. Gunakan POST untuk menulis.',
-    sheets: listSheetNames(),
-  });
+  try {
+    var ss = book();
+    return json({
+      ok: true,
+      version: VERSION,
+      message: 'Reagensia writer aktif. Gunakan POST untuk menulis.',
+      pemasangan: pemasangan_(),
+      spreadsheetId: ss.getId(),
+      spreadsheetName: ss.getName(),
+      sheets: listSheetNames(),
+    });
+  } catch (err) {
+    return json({
+      ok: false,
+      version: VERSION,
+      code: (err && err.code) || 'SERVER',
+      error: err && err.message ? err.message : String(err),
+    });
+  }
 }
 
 function doPost(e) {
@@ -64,7 +82,15 @@ function doPost(e) {
   try {
     if (body.action === 'ping') {
       requireToken(body.token);
-      return json({ ok: true, version: VERSION, sheets: listSheetNames() });
+      var ssPing = book();
+      return json({
+        ok: true,
+        version: VERSION,
+        pemasangan: pemasangan_(),
+        spreadsheetId: ssPing.getId(),
+        spreadsheetName: ssPing.getName(),
+        sheets: listSheetNames(),
+      });
     }
 
     // Membaca saja: tidak mengunci, tidak dicatat, tidak butuh requestId.
@@ -136,12 +162,65 @@ function requireToken(token) {
   if (String(token || '') !== String(expected)) throw fail('AUTH', 'Token ditolak.');
 }
 
+/**
+ * Workbook yang dilayani skrip ini — satu-satunya pintu ke spreadsheet.
+ *
+ * Ada dua cara memasang berkas ini, dan keduanya harus jalan tanpa diubah:
+ *
+ * - **Mandiri** (dipakai di workbook asli): proyek Apps Script yang berdiri
+ *   sendiri, tidak menempel di spreadsheet mana pun, dan membuka workbook-nya
+ *   lewat `SPREADSHEET_ID` di Script Properties.
+ * - **Terikat**: proyek yang lahir dari Extensions → Apps Script di dalam
+ *   spreadsheet itu sendiri. `SPREADSHEET_ID` boleh tidak diisi; `getActive()`
+ *   sudah mengembalikan workbook-nya.
+ *
+ * Yang mandiri bukan selera, tapi keharusan di workbook asli: di sana sudah
+ * ada skrip terikat milik orang lain ("V2.6" / LIMS Lite) yang juga
+ * mendefinisikan `doGet` dan `doPost`. Apps Script menaruh semua berkas dalam
+ * satu proyek ke **satu ruang nama global**, jadi menempelkan berkas ini di
+ * sebelahnya membuat salah satu `doPost` menang tanpa suara dan yang lain
+ * lenyap — tepat bentuk kegagalan diam-diam yang dihindari sepanjang berkas
+ * ini. Proyek mandiri tidak punya ruang nama bersama dengan siapa pun.
+ *
+ * `SPREADSHEET_ID` menang di atas `getActive()` dengan sengaja: itulah yang
+ * membuat satu berkas yang sama bisa diuji di salinan sebelum menyentuh
+ * workbook asli.
+ */
+var _book = null;
+function book() {
+  if (_book) return _book;
+
+  var id = String(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || '').trim();
+  if (id) {
+    try {
+      _book = SpreadsheetApp.openById(id);
+    } catch (err) {
+      throw fail('CONFIG', 'SPREADSHEET_ID di Script Properties tidak bisa dibuka: "' + id +
+        '". Periksa id-nya, dan pastikan akun yang memasang skrip ini punya akses tulis ke workbook itu.');
+    }
+    return _book;
+  }
+
+  _book = SpreadsheetApp.getActive();
+  if (!_book) {
+    throw fail('CONFIG', 'Skrip ini tidak terikat ke spreadsheet mana pun dan SPREADSHEET_ID belum diatur. ' +
+      'Isi SPREADSHEET_ID di Project Settings → Script Properties.');
+  }
+  return _book;
+}
+
+/** "mandiri" kalau workbook-nya dibuka lewat SPREADSHEET_ID, "terikat" kalau getActive(). */
+function pemasangan_() {
+  var id = String(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || '').trim();
+  return id ? 'mandiri' : 'terikat';
+}
+
 function listSheetNames() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheets().map(function (s) { return s.getName(); });
+  return book().getSheets().map(function (s) { return s.getName(); });
 }
 
 function sheetByName(name) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  var sheet = book().getSheetByName(name);
   if (!sheet) throw fail('NOT_FOUND', 'Tab "' + name + '" tidak ditemukan di spreadsheet ini.');
   return sheet;
 }
@@ -1090,7 +1169,7 @@ function inspect(body) {
   out.tabs = {};
   var names = [TABS.penerimaan, TABS.distribusi, TABS.pemusnahan];
   for (var t = 0; t < names.length; t++) {
-    var sh = SpreadsheetApp.getActive().getSheetByName(names[t]);
+    var sh = book().getSheetByName(names[t]);
     if (!sh) continue;
     out.tabs[names[t]] = { lastRow: sh.getLastRow(), lastColumn: sh.getLastColumn() };
   }
@@ -1102,7 +1181,7 @@ function inspect(body) {
 
 /** Catatan penulisan. Tab Log dibuat sendiri kalau belum ada. */
 function writeLog(body, result, status) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = book();
   var sheet = ss.getSheetByName(TABS.log);
   if (!sheet) {
     sheet = ss.insertSheet(TABS.log);
@@ -1127,7 +1206,14 @@ function writeLog(body, result, status) {
  * yang dibutuhkan ketemu, tanpa menulis apa pun ke spreadsheet.
  */
 function selfTest() {
-  var report = { version: VERSION, sheets: listSheetNames() };
+  var ss = book();
+  var report = {
+    version: VERSION,
+    pemasangan: pemasangan_(),
+    spreadsheetId: ss.getId(),
+    spreadsheetName: ss.getName(),
+    sheets: listSheetNames(),
+  };
 
   var ctx = masterContext();
   report.master = { headerRow: ctx.headerRow, cols: ctx.cols };

@@ -1,6 +1,18 @@
 /**
  * Pasang rumus ringkasan di Master Stok.
  *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ JANGAN DIJALANKAN DI WORKBOOK YANG SEKARANG. Premis berkas ini sudah    │
+ * │ kedaluwarsa: ia ditulis ketika Pembelian/Distribusi/Pemusnahan di       │
+ * │ Master Stok masih diisi tangan. Sejak itu pemilik spreadsheet memasang  │
+ * │ rumusnya sendiri — seluruh Master Stok kini rumus, Stok Awal ikut       │
+ * │ terhitung di dalamnya (catatan 11 di CLAUDE.md). pasangRumus() akan     │
+ * │ menimpa rumus miliknya dan menolkan Stok Awal yang masih dipakai.       │
+ * │                                                                         │
+ * │ Karena itu berkas ini ada di .claspignore dan tidak ikut terpasang.     │
+ * │ Ia tinggal di sini sebagai catatan bentuk rumusnya, bersama RUMUS.md.   │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
  * Masalah yang diselesaikan: kolom Pembelian, Distribusi, dan Pemusnahan di
  * Master Stok selama ini diisi tangan, terpisah dari tab transaksinya. Jadi
  * setiap kejadian harus diketik dua kali, dan begitu salah satunya terlewat
