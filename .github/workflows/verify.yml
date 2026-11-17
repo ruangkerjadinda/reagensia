@@ -1,0 +1,40 @@
+# Pemeriksaan otomatis setiap kali kode didorong.
+#
+# Tidak butuh satu pun secret: spreadsheet-nya dibagikan "siapa saja yang punya
+# tautan dapat melihat", jadi runner GitHub membacanya persis seperti peramban
+# siapa pun. Itu juga alasan pemeriksaan ini berguna — ia membaca sheet yang
+# sama dengan yang dibaca dashboard, dari jaringan yang berbeda.
+#
+# Yang digagalkan dan yang tidak: lihat komentar kepala tools/ci-check.mjs.
+
+name: Verifikasi
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Dorongan beruntun tidak perlu mengantre; yang lama dibatalkan.
+concurrency:
+  group: verifikasi-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifikasi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Tanpa dependensi sama sekali, jadi tidak ada npm install.
+      - name: Periksa sintaks, pemetaan kolom, dan rekonsiliasi
+        run: npm run check
