@@ -19,7 +19,7 @@
 
 import { CONFIG } from '../js/config.js';
 import { fetchAll } from '../js/data/sheets.js';
-import { normalize, lotKey } from '../js/data/normalize.js';
+import { normalize } from '../js/data/normalize.js';
 
 /* ------------------------------------------------------------- argumen */
 
@@ -85,11 +85,34 @@ async function post(action, payload, requestId) {
 /** Keadaan sheet sekarang, dibaca lewat jalur yang sama dengan dashboard. */
 async function state() {
   const { tables, errors } = await fetchAll(SHEET, { bust: true });
-  if (errors.length) throw new Error(`Gagal membaca salinan: ${errors.map((e) => e.tab).join(', ')}`);
+  if (errors.length === 5) {
+    // Semua tab gagal sekaligus hampir selalu berarti satu hal: salinannya
+    // belum dibagikan. gviz membaca sebagai tamu, tanpa login — kalau
+    // berkasnya masih privat, setiap tab menjawab sama-sama gagal.
+    throw new Error(
+      'Tidak satu pun tab terbaca. Hampir pasti salinannya belum dibagikan:\n'
+      + '  Buka salinan → Bagikan → Akses umum → "Siapa saja yang memiliki link" → Pelihat.\n'
+      + '  Uji terima membaca ulang sheet lewat gviz (tanpa login), persis seperti dashboard,\n'
+      + '  supaya yang memeriksa hasil bukan skrip yang barusan menulisnya.',
+    );
+  }
+  if (errors.length) throw new Error(`Gagal membaca salinan: ${errors.map((e) => `${e.tab} (${e.message})`).join(', ')}`);
   const data = normalize(tables);
   const byKey = new Map(data.lots.map((l) => [l.key, l]));
   return { data, byKey, lot: (k) => byKey.get(k) };
 }
+
+/**
+ * Jawaban server, dipendekkan.
+ *
+ * Setiap kegagalan menyertakan ini. Tanpanya, langkah yang gagal karena
+ * servernya menolak terlihat sama persis dengan langkah yang gagal karena
+ * angkanya salah — dan satu kali kejadian ("Kolom wajib belum diisi:
+ * metode") sudah cukup untuk menghabiskan satu putaran diagnosis penuh.
+ */
+const jawab = (r) => (r && r.ok === false
+  ? `ditolak: ${r.code || ''} ${String(r.error || '').slice(0, 180)}`
+  : `jawaban: ${JSON.stringify(r).slice(0, 180)}`);
 
 const iso = (d) => ({ __date: d.toISOString() });
 const hariIni = iso(new Date());
@@ -102,7 +125,13 @@ const awal = await state();
 
 // Lot percobaan dipilih dari isi salinan: harus punya nomor lot dan sisa yang
 // cukup untuk dikurangi beberapa kali tanpa menyentuh nol di tengah jalan.
-const subjek = awal.data.lots.find((l) => l.lot && l.sisaStok >= 5 && l.kode);
+// Kuncinya harus unik di salinan ini. Satu lot bisa muncul dua kali kalau
+// pernah ditulis dengan ejaan nama yang berbeda (lihat identitasMaster di
+// Code.gs); peta byKey menyimpan yang terakhir, jadi lot kembar akan membuat
+// langkah 1 membandingkan baris yang berbeda dengan yang barusan ditambah.
+const berapaKali = new Map();
+for (const l of awal.data.lots) berapaKali.set(l.key, (berapaKali.get(l.key) || 0) + 1);
+const subjek = awal.data.lots.find((l) => l.lot && l.sisaStok >= 5 && l.kode && berapaKali.get(l.key) === 1);
 if (!subjek) {
   console.error('Tidak ada lot dengan nomor lot dan sisa >= 5 di salinan ini; uji terima butuh satu.');
   process.exit(2);
@@ -129,17 +158,22 @@ periksa(1, 'Penerimaan lot yang sudah ada menambah stok',
 
 /* 2. Penerimaan untuk lot yang belum pernah ada */
 const kodeBaru = `UJI-${stamp}`;
+const namaBaru = `REAGEN UJI ${stamp}`;
 const lotBaru = `LOT-UJI-${stamp}`;
-const kunciBaru = lotKey(kodeBaru, lotBaru);
+// Lot baru dicari lewat nama + lot, bukan lewat kode. Kolom Kode di tab
+// Penerimaan adalah rumus yang mencari kode dari nama reagen di Daftar Kode,
+// jadi reagen yang belum terdaftar di sana memang tidak punya kode — dan
+// kunci kode|lot untuk lot seperti itu tidak akan pernah ketemu.
+const lotBaruDi = (st) => st.data.lots.find((l) => l.nama === namaBaru && l.lot === lotBaru);
 const r2 = await post('penerimaan.create', {
-  instalasi: subjek.instalasi, kode: kodeBaru, nama: `REAGEN UJI ${stamp}`, lot: lotBaru,
-  merk: 'UJI', supplier: 'UJI', unit: subjek.unit || 'Kit', kategori: 'Pembelian',
+  instalasi: subjek.instalasi, kode: kodeBaru, nama: namaBaru, lot: lotBaru,
+  merk: 'UJI', supplier: 'UJI', unit: subjek.unit || 'Kit', kategori: identitas.kategori,
   tanggal: hariIni, qty: 4, pic: ACTOR, ket: 'uji terima 2',
 });
 s = await state();
 periksa(2, 'Penerimaan lot baru membuat baris Master Stok sendiri',
-  r2.ok && s.lot(kunciBaru) && s.lot(kunciBaru).sisaStok === 4,
-  r2.ok ? `sisa lot baru = ${s.lot(kunciBaru)?.sisaStok} (diharapkan 4)` : JSON.stringify(r2).slice(0, 200));
+  r2.ok && lotBaruDi(s) && lotBaruDi(s).sisaStok === 4,
+  `baris ${lotBaruDi(s)?._row || '(belum muncul)'}, sisa ${lotBaruDi(s)?.sisaStok} (diharapkan 4); ${jawab(r2)}`);
 
 /* 3. Distribusi */
 const sebelum3 = s.lot(subjek.key)?.sisaStok ?? 0;
@@ -150,7 +184,7 @@ const r3 = await post('distribusi.create', {
 s = await state();
 periksa(3, 'Distribusi mengurangi stok',
   r3.ok && s.lot(subjek.key)?.sisaStok === sebelum3 - 1,
-  `sisa ${sebelum3} → ${s.lot(subjek.key)?.sisaStok} (diharapkan ${sebelum3 - 1})`);
+  `sisa ${sebelum3} → ${s.lot(subjek.key)?.sisaStok} (diharapkan ${sebelum3 - 1}); ${jawab(r3)}`);
 
 /* 4. Pemusnahan */
 const sebelum4 = s.lot(subjek.key)?.sisaStok ?? 0;
@@ -160,7 +194,7 @@ const r4 = await post('pemusnahan.create', {
 s = await state();
 periksa(4, 'Pemusnahan mengurangi stok',
   r4.ok && s.lot(subjek.key)?.sisaStok === sebelum4 - 1,
-  `sisa ${sebelum4} → ${s.lot(subjek.key)?.sisaStok} (diharapkan ${sebelum4 - 1})`);
+  `sisa ${sebelum4} → ${s.lot(subjek.key)?.sisaStok} (diharapkan ${sebelum4 - 1}); ${jawab(r4)}`);
 
 /* 5. Distribusi melebihi sisa harus ditolak */
 const sebelum5 = s.lot(subjek.key)?.sisaStok ?? 0;
@@ -171,7 +205,7 @@ const r5 = await post('distribusi.create', {
 s = await state();
 periksa(5, 'Distribusi melebihi sisa ditolak dan tidak meninggalkan baris',
   !r5.ok && s.data.issues.length === jumlahBaris5 && s.lot(subjek.key)?.sisaStok === sebelum5,
-  `jawaban: ${JSON.stringify(r5).slice(0, 160)}`);
+  jawab(r5));
 
 /* 6. Kiriman ganda */
 const jumlahBaris6 = s.data.issues.length;
@@ -181,7 +215,7 @@ const r6 = await post('distribusi.create', {
 s = await state();
 periksa(6, 'requestId yang sama tidak membuat baris kedua',
   r6.duplicate === true && s.data.issues.length === jumlahBaris6,
-  `duplicate=${r6.duplicate}, baris distribusi ${jumlahBaris6} → ${s.data.issues.length}`);
+  `duplicate=${r6.duplicate}, baris distribusi ${jumlahBaris6} → ${s.data.issues.length}; ${jawab(r6)}`);
 
 /* 7. Sisa Stok harus berupa rumus.
  *    gviz hanya mengirim nilai, bukan rumus — jadi yang ditanya adalah skripnya
@@ -190,7 +224,7 @@ periksa(6, 'requestId yang sama tidak membuat baris kedua',
 const r7 = await post('maintenance.repairSisa', { dryRun: true });
 const barisTanpaRumus = new Set((r7.result?.rows || r7.rows || []).map((x) => x.row));
 const barisSubjek = s.lot(subjek.key)?._row;
-const barisBaru = s.lot(kunciBaru)?._row;
+const barisBaru = lotBaruDi(s)?._row;
 periksa(7, 'Sisa Stok pada baris yang tersentuh tetap berupa rumus',
   r7.ok !== false && !barisTanpaRumus.has(barisSubjek) && !barisTanpaRumus.has(barisBaru),
   `baris ${barisSubjek} dan ${barisBaru}; ${barisTanpaRumus.size} baris tanpa rumus di seluruh sheet`);
@@ -201,20 +235,33 @@ periksa(8, 'Tab Log mencatat setiap penulisan',
   log >= 5,
   `${log} baris di tab Log (minimal 5 penulisan berhasil di atas)`);
 
-/* 9. Distribusi sampai nol mengubah status */
-const sisaBaru = s.lot(kunciBaru)?.sisaStok ?? 0;
+/* 9. Distribusi sampai nol: sisa 0, dan kolom Status tidak ikut dirusak.
+ *
+ *    Harapan lama ("statusnya jadi TIDAK AKTIF") salah untuk workbook ini.
+ *    Status di Master Stok adalah rumus tanggal kedaluwarsa — TIDAK AKTIF di
+ *    sana berarti lewat exp date, bukan stok habis. Menulis TIDAK AKTIF ke
+ *    sana justru yang merusak: rumusnya hilang dan kolomnya berhenti ikut
+ *    tanggal. Jadi yang diperiksa adalah sisa benar-benar nol DAN rumus
+ *    Status-nya masih utuh. Lot yang habis ditandai dashboard sendiri, dari
+ *    Sisa Stok. */
+const sisaBaru = lotBaruDi(s)?.sisaStok ?? 0;
 let r9 = { ok: true };
 if (sisaBaru > 0) {
   r9 = await post('distribusi.create', {
-    instalasi: subjek.instalasi, kode: kodeBaru, nama: `REAGEN UJI ${stamp}`, lot: lotBaru,
-    merk: 'UJI', supplier: 'UJI', unit: subjek.unit || 'Kit', kategori: 'Pembelian',
+    instalasi: subjek.instalasi, kode: kodeBaru, nama: namaBaru, lot: lotBaru,
+    merk: 'UJI', supplier: 'UJI', unit: subjek.unit || 'Kit', kategori: identitas.kategori,
     tanggal: hariIni, qty: sisaBaru, picPengirim: ACTOR, picPenerima: 'Penerima Uji', ket: 'uji terima 9',
   });
 }
 s = await state();
-periksa(9, 'Lot yang habis otomatis jadi TIDAK AKTIF',
-  r9.ok && s.lot(kunciBaru)?.sisaStok === 0 && s.lot(kunciBaru)?.status === 'TIDAK AKTIF',
-  `sisa ${s.lot(kunciBaru)?.sisaStok}, status "${s.lot(kunciBaru)?.status}"`);
+const sel9 = await post('maintenance.inspect', { kode: kodeBaru, nama: namaBaru, lot: lotBaru }, `uji-${stamp}-inspect`);
+const status9 = sel9.result?.master?.cells?.status || {};
+// Rumus utuh, atau — di workbook yang Status-nya memang diketik — TIDAK AKTIF.
+const statusUtuh = String(status9.formula || '') !== '' || s.lot(kunciBaru)?.status === 'TIDAK AKTIF';
+periksa(9, 'Lot yang habis jadi sisa 0 tanpa merusak kolom Status',
+  r9.ok && lotBaruDi(s)?.sisaStok === 0 && statusUtuh,
+  `sisa ${lotBaruDi(s)?.sisaStok}, status "${lotBaruDi(s)?.status}", `
+  + `rumus Status ${status9.formula ? 'utuh' : 'TIDAK ada'}; ${jawab(r9)}`);
 
 /* -------------------------------------------------------------- tutup */
 

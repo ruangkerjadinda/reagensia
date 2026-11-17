@@ -67,6 +67,12 @@ function doPost(e) {
       return json({ ok: true, version: VERSION, sheets: listSheetNames() });
     }
 
+    // Membaca saja: tidak mengunci, tidak dicatat, tidak butuh requestId.
+    if (body.action === 'maintenance.inspect') {
+      requireToken(body.token);
+      return json({ ok: true, action: body.action, result: inspect(body) });
+    }
+
     requireToken(body.token);
 
     if (!body.requestId) {
@@ -280,8 +286,21 @@ function masterContext() {
   return { sheet: sheet, headerRow: header.row, cols: cols };
 }
 
-/** Cari baris Master Stok menurut Kode + Kode/Lot. */
-function findMasterRow(ctx, kode, lot) {
+/**
+ * Cari baris Master Stok: Kode + Kode/Lot dulu, lalu Nama Reagen + Kode/Lot.
+ *
+ * Kunci sejati workbook ini adalah Nama Reagen + Kode/Lot — itu yang dipakai
+ * semua rumusnya, dan UNIQUE() yang menjamin pasangannya hanya muncul sekali.
+ * Kode justru kolom turunan: di tab Penerimaan ia rumus yang mencari kode dari
+ * nama reagen, jadi reagen yang belum terdaftar di Daftar Kode tidak punya
+ * kode sama sekali. Mencari lewat kode saja membuat lot baru seperti itu
+ * "tidak ditemukan" padahal barisnya sudah ada.
+ *
+ * Kode tetap dicoba lebih dulu karena itu yang dikirim dashboard, dan karena
+ * ada 14 nomor lot yang dipakai lebih dari satu reagen — mencocokkan lot saja
+ * akan memindahkan transaksi ke lot orang lain.
+ */
+function findMasterRow(ctx, kode, lot, nama) {
   var last = ctx.sheet.getLastRow();
   if (last <= ctx.headerRow) return 0;
 
@@ -290,8 +309,19 @@ function findMasterRow(ctx, kode, lot) {
   var lots = ctx.sheet.getRange(ctx.headerRow + 1, ctx.cols.lot, count, 1).getValues();
   var target = normKey(kode, lot);
 
-  for (var i = 0; i < count; i++) {
-    if (normKey(kodes[i][0], lots[i][0]) === target) return ctx.headerRow + 1 + i;
+  var i;
+  if (String(kode || '') !== '') {
+    for (i = 0; i < count; i++) {
+      if (normKey(kodes[i][0], lots[i][0]) === target) return ctx.headerRow + 1 + i;
+    }
+  }
+
+  if (String(nama || '') === '' || !ctx.cols.nama) return 0;
+
+  var namas = ctx.sheet.getRange(ctx.headerRow + 1, ctx.cols.nama, count, 1).getValues();
+  var targetNama = normKey(nama, lot);
+  for (i = 0; i < count; i++) {
+    if (normKey(namas[i][0], lots[i][0]) === targetNama) return ctx.headerRow + 1 + i;
   }
   return 0;
 }
@@ -378,11 +408,127 @@ function readMasterRow(ctx, row) {
   };
 }
 
+/* --------------------------------------------- Master Stok yang turunan */
+
+/**
+ * Benar kalau baris Master Stok di workbook ini menghitung dirinya sendiri.
+ *
+ * Workbook Dinda dibangun begitu: Nama Reagen dan Kode/Lot adalah spill
+ * UNIQUE(FILTER(Penerimaan!E:F)), kolom masuk/keluar SUMPRODUCT ke tab
+ * transaksi, Sisa Stok penjumlahannya, Status rumus tanggal kedaluwarsa.
+ * Tidak ada satu pun yang boleh ditulisi: barisnya muncul dan berubah sendiri
+ * begitu baris transaksinya ada.
+ *
+ * Diperiksa lewat kolom Nama Reagen, bukan Pembelian — kolom masuk masih bisa
+ * berupa angka ketikan di workbook yang belum dikonversi, sedangkan identitas
+ * baris yang berupa rumus adalah tanda pasti bahwa barisnya turunan.
+ */
+function masterTurunan_(ctx) {
+  var last = ctx.sheet.getLastRow();
+  if (last <= ctx.headerRow || !ctx.cols.nama) return false;
+  var rumus = ctx.sheet.getRange(ctx.headerRow + 1, ctx.cols.nama, last - ctx.headerRow, 1).getFormulas();
+  for (var i = 0; i < rumus.length; i++) {
+    if (String(rumus[i][0] || '') !== '') return true;
+  }
+  return false;
+}
+
+/**
+ * Nama Reagen dan Kode/Lot persis seperti yang tertulis di Master Stok.
+ *
+ * Rumusnya mengunci baris Master Stok ke tab transaksi lewat kecocokan teks:
+ * SUMPRODUCT((Penerimaan!$E$5:$E$1041=$D32)*(Penerimaan!$F$5:$F$1041=$E32);…)
+ * Jadi satu spasi di ujung nama sudah cukup untuk membuat penerimaan dianggap
+ * lot lain — UNIQUE() menambah pasangan baru, muncul baris Master Stok kedua
+ * untuk lot yang sama, dan stoknya terbelah dua tanpa satu pun error. Nama
+ * yang dikirim dashboard sudah di-trim, jadi teksnya diambil dari sheet.
+ */
+function identitasMaster(ctx, row) {
+  return {
+    nama: ctx.cols.nama ? ctx.sheet.getRange(row, ctx.cols.nama).getValue() : '',
+    lot: ctx.cols.lot ? ctx.sheet.getRange(row, ctx.cols.lot).getValue() : '',
+  };
+}
+
+/** Daftar nilai yang diizinkan validasi data pada satu sel, atau null. */
+function nilaiValidasi_(sheet, row, col) {
+  if (!col) return null;
+  var rule;
+  try {
+    rule = sheet.getRange(row, col).getDataValidation();
+  } catch (e) {
+    return null;
+  }
+  if (!rule) return null;
+
+  var jenis = rule.getCriteriaType();
+  var isi = rule.getCriteriaValues();
+  if (jenis === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
+    return isi[0].map(function (v) { return String(v); });
+  }
+  if (jenis === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE) {
+    return isi[0].getValues()
+      .map(function (r) { return String(r[0]); })
+      .filter(function (v) { return v !== ''; });
+  }
+  return null;
+}
+
+/**
+ * Kategori dengan ejaan persis seperti daftar validasi di sheet.
+ *
+ * Daftarnya dibaca dari selnya, tidak dihafal di sini — tahun depan
+ * "Pembelian 2026" berganti dan kodenya tidak perlu ikut diubah. Kalau tidak
+ * ada yang cocok, yang dilempar adalah VALIDATION berisi daftar yang sah;
+ * tanpa pemeriksaan ini yang sampai ke pengguna adalah galat panjang dari
+ * Google — dan separuh barisnya sudah tertulis sebelum galatnya muncul.
+ *
+ * Ejaannya bukan kosmetik: kolom masuk Master Stok adalah SUMPRODUCT yang
+ * membandingkan teks Kategori apa adanya, jadi "Pembelian" dan
+ * "Pembelian 2026" mendarat di kolom yang berbeda.
+ */
+function cocokkanKategori_(nilai, izin) {
+  if (!izin || !izin.length) return nilai || '';
+  var k = String(nilai || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  for (var i = 0; i < izin.length; i++) {
+    if (izin[i].toLowerCase().replace(/\s+/g, ' ').trim() === k) return izin[i];
+  }
+  throw fail('VALIDATION', 'Kategori "' + (nilai || '')
+    + '" tidak ada di daftar yang diizinkan sheet: ' + izin.join(', ') + '.');
+}
+
+/**
+ * Akibat satu baris transaksi di Master Stok.
+ *
+ * Kalau barisnya turunan tidak ada yang ditulis — cukup flush lalu baca ulang
+ * hasil hitungannya, supaya jawaban ke dashboard memuat angka sungguhan.
+ * Workbook yang kolom masuknya masih angka ketikan tetap dilayani bumpMaster
+ * seperti sebelumnya.
+ */
+function terapkanKeMaster_(ctx, row, field, qty, before, sisaBefore) {
+  if (!masterTurunan_(ctx)) return bumpMaster(ctx, row, field, qty);
+
+  SpreadsheetApp.flush();
+  var col = ctx.cols[field];
+  return {
+    row: row,
+    field: field,
+    turunan: true,
+    before: before,
+    after: col ? num(ctx.sheet.getRange(row, col).getValue()) : 0,
+    sisaBefore: sisaBefore,
+    sisaAfter: num(ctx.sheet.getRange(row, ctx.cols.sisaStok).getValue()),
+  };
+}
+
 /* ------------------------------------------------------------ penerimaan */
 
 function createPenerimaan(body) {
   var p = body.payload || {};
-  requireFields(p, ['instalasi', 'kode', 'nama', 'qty', 'unit', 'pic', 'tanggal']);
+  // Kategori wajib: ia yang menentukan kolom masuk mana yang bertambah di
+  // Master Stok. Penerimaan tanpa kategori tidak dihitung kolom mana pun —
+  // barisnya tertulis, stoknya tidak pernah naik, dan tidak ada yang error.
+  requireFields(p, ['instalasi', 'kode', 'nama', 'qty', 'unit', 'pic', 'tanggal', 'kategori']);
 
   var qty = num(p.qty);
   if (qty <= 0) throw fail('VALIDATION', 'Jumlah harus lebih besar dari nol.');
@@ -411,23 +557,55 @@ function createPenerimaan(body) {
     statusMsds: colOf(h, ['Status MSDS']),
     ket: colOf(h, ['Catatan', 'Ket', 'Keterangan']),
     suhuSimpan: colOf(h, ['Suhu Simpan']),
+    suhuTerima: colOf(h, ['Suhu Saat Terima']),
     lokasiSimpan: colOf(h, ['Lokasi Simpan']),
     kondisiKemasan: colOf(h, ['Kondisi Kemasan']),
     statusPenerimaan: colOf(h, ['Status Penerimaan']),
     kodeBmn: colOf(h, ['KODE BMN', 'Kode BMN', 'BMN']),
   };
 
+  // Master Stok dibaca DULU. Kalau lot ini sudah ada, nama dan nomor lotnya
+  // diambil dari sana — lihat identitasMaster() untuk alasannya.
+  var ctx = masterContext();
+  var masterRow = findMasterRow(ctx, p.kode, p.lot, p.nama);
+  var turunan = masterTurunan_(ctx);
+
+  var fieldMasuk = kolomMasuk(p.kategori);
+  if (!ctx.cols[fieldMasuk]) fieldMasuk = 'pembelian';
+
+  var nama = p.nama;
+  var lot = p.lot || '';
+  var sisaBefore = 0;
+  var masukBefore = 0;
+
+  if (masterRow) {
+    var id = identitasMaster(ctx, masterRow);
+    if (id.nama !== '' && id.nama !== null) nama = id.nama;
+    if (id.lot !== '' && id.lot !== null) lot = id.lot;
+    sisaBefore = num(ctx.sheet.getRange(masterRow, ctx.cols.sisaStok).getValue());
+    masukBefore = ctx.cols[fieldMasuk]
+      ? num(ctx.sheet.getRange(masterRow, ctx.cols[fieldMasuk]).getValue())
+      : 0;
+  }
+
   var row = nextRow(sheet, header.row, cols.kode || cols.instalasi);
+
+  // Kategori diperiksa sebelum satu sel pun ditulis.
+  var kategori = cocokkanKategori_(
+    p.kategori,
+    nilaiValidasi_(sheet, row, cols.kategori) || nilaiValidasi_(sheet, header.row + 1, cols.kategori)
+  );
+
   var values = {};
   values[cols.no] = nextNumber(sheet, header.row, cols.no, row);
   values[cols.instalasi] = p.instalasi;
   values[cols.kode] = p.kode;
   values[cols.tanggal] = parseDate(p.tanggal);
-  values[cols.nama] = p.nama;
-  values[cols.lot] = p.lot || '';
+  values[cols.nama] = nama;
+  values[cols.lot] = lot;
   values[cols.expDate] = parseDate(p.expDate);
   values[cols.merk] = p.merk || '';
-  values[cols.kategori] = p.kategori || '';
+  values[cols.kategori] = kategori;
   values[cols.supplier] = p.supplier || '';
   values[cols.qty] = qty;
   values[cols.unit] = p.unit;
@@ -437,37 +615,65 @@ function createPenerimaan(body) {
   values[cols.statusCoa] = p.linkCoa ? 'AVAILABLE' : 'NOT AVAILABLE';
   values[cols.statusMsds] = p.linkMsds ? 'AVAILABLE' : 'NOT AVAILABLE';
   values[cols.ket] = p.ket || '';
-  // Kolom yang tidak ada di sheet datang sebagai 0 dan dilewati writeRow, tapi
-  // menulis semuanya ke values[0] membuat nilainya saling menimpa tanpa jejak —
-  // jadi yang kosong tidak usah disetel sama sekali.
-  if (cols.suhuSimpan) values[cols.suhuSimpan] = p.suhuSimpan || '';
-  if (cols.lokasiSimpan) values[cols.lokasiSimpan] = p.lokasiSimpan || '';
-  if (cols.kondisiKemasan) values[cols.kondisiKemasan] = p.kondisiKemasan || '';
-  if (cols.statusPenerimaan) values[cols.statusPenerimaan] = p.statusPenerimaan || 'DITERIMA';
-  if (cols.kodeBmn) values[cols.kodeBmn] = p.kodeBmn || '';
+  // Kolom yang tidak ada di sheet datang sebagai 0; kalau disetel lewat
+  // values[0] nilainya saling menimpa dulu lalu dibuang tanpa jejak, jadi
+  // semuanya lewat setIfCol.
+  setIfCol(values, cols.suhuSimpan, p.suhuSimpan);
+  setIfCol(values, cols.suhuTerima, p.suhuTerima);
+  setIfCol(values, cols.lokasiSimpan, p.lokasiSimpan);
+  setIfCol(values, cols.kondisiKemasan, p.kondisiKemasan);
+  setIfCol(values, cols.statusPenerimaan, p.statusPenerimaan || 'DITERIMA');
+  setIfCol(values, cols.kodeBmn, p.kodeBmn);
 
-  writeRow(sheet, row, values);
+  var tulis = writeRow(sheet, row, values);
 
-  var ctx = masterContext();
-  var masterRow = findMasterRow(ctx, p.kode, p.lot);
   var master;
-
   if (masterRow) {
     // Kategori penerimaannya yang menentukan kolom masuk mana yang bertambah —
-    // Hibah, Titipan Daerah, Stok Awal, atau Pembelian. Kalau kolom itu sudah
-    // berisi SUMIFS, bumpMaster membiarkannya dan rumusnya yang menghitung.
-    var fieldMasuk = kolomMasuk(p.kategori);
-    if (!ctx.cols[fieldMasuk]) fieldMasuk = 'pembelian';
-    master = bumpMaster(ctx, masterRow, fieldMasuk, qty, body.actor);
+    // Hibah, Titipan Daerah, Stok Awal, atau Pembelian.
+    master = terapkanKeMaster_(ctx, masterRow, fieldMasuk, qty, masukBefore, sisaBefore);
+  } else if (turunan) {
+    // Baris Master Stok untuk lot baru TIDAK dibuat di sini: spill UNIQUE()
+    // di sheet yang membuatnya, dan menulis baris sendiri di atas spill itu
+    // mematikan rumusnya. Yang dikerjakan hanya memastikan barisnya muncul.
+    SpreadsheetApp.flush();
+    var barisBaru = findMasterRow(ctx, p.kode, lot, nama);
+    var ditarik = 0;
+    if (!barisBaru) {
+      // Spill-nya kehabisan baris berumus. Ditarik satu baris lagi, lalu
+      // dicari ulang — lihat tarikBarisMaster_.
+      ditarik = tarikBarisMaster_(ctx);
+      if (ditarik) barisBaru = findMasterRow(ctx, p.kode, lot, nama);
+    }
+    master = {
+      row: barisBaru,
+      field: fieldMasuk,
+      turunan: true,
+      created: true,
+      before: 0,
+      after: qty,
+      sisaBefore: 0,
+      sisaAfter: barisBaru ? num(ctx.sheet.getRange(barisBaru, ctx.cols.sisaStok).getValue()) : 0,
+    };
+    if (ditarik) master.barisDitarik = ditarik;
+    if (!barisBaru) {
+      master.catatan = 'Baris Master Stok belum muncul untuk lot ini, bahkan setelah'
+        + ' rumusnya ditarik satu baris. Periksa rentang rumus di Master Stok.';
+    }
   } else {
-    master = createMasterRow(ctx, p, qty);
+    master = createMasterRow(ctx, p, qty, nama, lot);
   }
 
-  return { tab: TABS.penerimaan, row: row, master: master };
+  return { tab: TABS.penerimaan, row: row, master: master, dilewati: tulis.dilewati };
 }
 
-/** Lot yang belum pernah tercatat mendapat baris Master Stok sendiri. */
-function createMasterRow(ctx, p, qty) {
+/**
+ * Lot yang belum pernah tercatat mendapat baris Master Stok sendiri.
+ *
+ * Hanya untuk workbook yang Master Stok-nya memang diketik baris per baris;
+ * kalau barisnya turunan, createPenerimaan tidak sampai ke sini.
+ */
+function createMasterRow(ctx, p, qty, nama, lot) {
   var row = nextRow(ctx.sheet, ctx.headerRow, ctx.cols.kode);
   var exp = parseDate(p.expDate);
   var values = {};
@@ -475,14 +681,14 @@ function createMasterRow(ctx, p, qty) {
   values[ctx.cols.no] = nextNumber(ctx.sheet, ctx.headerRow, ctx.cols.no, row);
   values[ctx.cols.instalasi] = p.instalasi;
   values[ctx.cols.kode] = p.kode;
-  values[ctx.cols.nama] = p.nama;
-  values[ctx.cols.lot] = p.lot || '';
+  values[ctx.cols.nama] = nama || p.nama;
+  values[ctx.cols.lot] = lot || p.lot || '';
   values[ctx.cols.expDate] = exp;
   values[ctx.cols.merk] = p.merk || '';
   values[ctx.cols.supplier] = p.supplier || '';
-  // Kalau Master Stok sudah memakai rumus, saldo pembuka lot baru adalah 0 dan
-  // qty-nya masuk lewat SUMIFS ke baris Penerimaan yang barusan ditulis —
-  // menaruhnya di Stok Awal juga akan menghitungnya dua kali.
+  // Kalau kolom masuk Master Stok sudah memakai rumus, saldo pembuka lot baru
+  // adalah 0 dan qty-nya masuk lewat rumus itu dari baris Penerimaan yang
+  // barusan ditulis — menaruhnya di sini juga akan menghitungnya dua kali.
   var barisRumus = barisRumusMaster_(ctx);
 
   var fieldMasuk = kolomMasuk(p.kategori);
@@ -496,9 +702,10 @@ function createMasterRow(ctx, p, qty) {
   values[ctx.cols.pemusnahan] = 0;
   values[ctx.cols.unit] = p.unit;
   values[ctx.cols.stokMin] = p.stokMin === undefined ? 1 : num(p.stokMin);
+  setIfCol(values, ctx.cols.lokasi, p.lokasi);
+  setIfCol(values, ctx.cols.pic, p.pic);
+  // Status ikut ditulis hanya kalau kolomnya bukan rumus; writeRow menjaganya.
   values[ctx.cols.status] = exp && exp < new Date() ? 'TIDAK AKTIF' : 'AKTIF';
-  values[ctx.cols.lokasi] = p.lokasi || '';
-  values[ctx.cols.pic] = p.pic || '';
 
   writeRow(ctx.sheet, row, values);
 
@@ -551,21 +758,67 @@ function salinRumusMaster_(ctx, dariBaris, keBaris) {
   }
 }
 
+/**
+ * Tarik rumus Master Stok satu baris ke bawah, dan kembalikan nomor barisnya.
+ *
+ * Baris Master Stok di workbook ini muncul sendiri dari spill UNIQUE() — tapi
+ * hanya sejauh rumusnya pernah ditarik ke bawah. Lot ke-330 di workbook yang
+ * rumusnya berhenti di baris 333 tidak muncul di mana pun: penerimaannya
+ * tercatat, stoknya tidak pernah kelihatan, dan tidak ada yang error.
+ *
+ * Yang disalin hanya kolom yang di baris sumbernya memang berisi rumus, satu
+ * per satu, dengan PASTE_FORMULA — jadi rujukan relatifnya menyesuaikan
+ * sendiri dan bentuk rumus milik pemilik sheet tetap miliknya. Kolom yang di
+ * sana berupa angka ketikan (Unit, Stok Min, Lokasi) dibiarkan kosong, bukan
+ * diwarisi dari lot sebelumnya.
+ */
+function tarikBarisMaster_(ctx) {
+  var last = ctx.sheet.getLastRow();
+  if (last <= ctx.headerRow || !ctx.cols.nama) return 0;
+
+  var awal = ctx.headerRow + 1;
+  var lebar = ctx.sheet.getLastColumn();
+  var identitas = ctx.sheet.getRange(awal, ctx.cols.nama, last - awal + 1, 1).getFormulas();
+
+  var sumber = 0;
+  for (var i = identitas.length - 1; i >= 0; i--) {
+    if (String(identitas[i][0] || '') !== '') { sumber = awal + i; break; }
+  }
+  if (!sumber) return 0;
+
+  var tujuan = sumber + 1;
+  var rumus = ctx.sheet.getRange(sumber, 1, 1, lebar).getFormulas()[0];
+  var disalin = 0;
+  for (var c = 0; c < lebar; c++) {
+    if (String(rumus[c] || '') === '') continue;
+    ctx.sheet.getRange(sumber, c + 1)
+      .copyTo(ctx.sheet.getRange(tujuan, c + 1), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+    disalin += 1;
+  }
+  if (!disalin) return 0;
+
+  SpreadsheetApp.flush();
+  return tujuan;
+}
+
 /* ---------------------------------------------- distribusi & pemusnahan */
 
 function createOutbound(body, kind) {
   var p = body.payload || {};
   var isDisposal = kind === 'pemusnahan';
 
+  // Daftar ini harus sama dengan kolom yang benar-benar ada di tab tujuannya.
+  // Tab Pemusnahan tidak punya kolom Unit maupun Metode — mewajibkan field
+  // yang tidak bisa disimpan hanya menolak kiriman yang sebenarnya sah.
   requireFields(p, isDisposal
-    ? ['instalasi', 'kode', 'lot', 'nama', 'qty', 'unit', 'tanggal', 'alasan', 'metode', 'pic']
+    ? ['instalasi', 'kode', 'lot', 'nama', 'qty', 'tanggal', 'alasan', 'pic']
     : ['instalasi', 'kode', 'lot', 'nama', 'qty', 'unit', 'tanggal', 'picPengirim', 'picPenerima']);
 
   var qty = num(p.qty);
   if (qty <= 0) throw fail('VALIDATION', 'Jumlah harus lebih besar dari nol.');
 
   var ctx = masterContext();
-  var masterRow = findMasterRow(ctx, p.kode, p.lot);
+  var masterRow = findMasterRow(ctx, p.kode, p.lot, p.nama);
   if (!masterRow) {
     throw fail('NOT_FOUND', 'Lot ' + p.kode + ' / ' + p.lot + ' tidak ada di Master Stok, jadi stoknya tidak bisa dikurangi.');
   }
@@ -576,6 +829,12 @@ function createOutbound(body, kind) {
   if (qty > current.sisaStok) {
     throw fail('VALIDATION', 'Sisa stok lot ini tinggal ' + current.sisaStok + ', tidak cukup untuk ' + qty + '.');
   }
+
+  // Nama dan nomor lot diambil dari Master Stok, bukan dari kiriman — rumus
+  // kolom keluar mencocokkan teksnya apa adanya (lihat identitasMaster).
+  var id = identitasMaster(ctx, masterRow);
+  var nama = id.nama !== '' && id.nama !== null ? id.nama : p.nama;
+  var lot = id.lot !== '' && id.lot !== null ? id.lot : p.lot;
 
   var sheet = sheetByName(isDisposal ? TABS.pemusnahan : TABS.distribusi);
   var header = findHeader(sheet, ['Instalasi']);
@@ -600,43 +859,80 @@ function createOutbound(body, kind) {
     ket: colOf(h, ['Ket', 'Keterangan', 'Catatan']),
   };
 
-  var row = nextRow(sheet, header.row, cols.kode || cols.instalasi);
+  var row = nextRow(sheet, header.row, cols.nama || cols.instalasi);
+
+  // Kategori di baris keluar cuma keterangan: kolom Distribusi dan Pemusnahan
+  // di Master Stok menjumlahkan qty tanpa melihatnya sama sekali. Dan tiap tab
+  // punya daftar validasinya sendiri — Distribusi menerima "Pembelian", bukan
+  // "Pembelian 2026", dan tidak menerima "Stok Awal" yang justru kategori asal
+  // banyak lot. Jadi yang tidak ada di daftar dikosongkan dan dilaporkan, bukan
+  // dipakai untuk menolak pengeluaran stok yang sah.
+  var kategori = p.kategori || '';
+  var kategoriDitolak = '';
+  if (cols.kategori && kategori !== '') {
+    var izin = nilaiValidasi_(sheet, row, cols.kategori)
+      || nilaiValidasi_(sheet, header.row + 1, cols.kategori);
+    try {
+      kategori = cocokkanKategori_(kategori, izin);
+    } catch (e) {
+      kategoriDitolak = kategori;
+      kategori = '';
+    }
+  }
+
   var values = {};
   values[cols.no] = nextNumber(sheet, header.row, cols.no, row);
   values[cols.instalasi] = p.instalasi;
-  if (cols.kode) values[cols.kode] = p.kode;
+  setIfCol(values, cols.kode, p.kode);
   values[cols.tanggal] = parseDate(p.tanggal);
-  values[cols.nama] = p.nama;
-  values[cols.lot] = p.lot;
+  values[cols.nama] = nama;
+  values[cols.lot] = lot;
   values[cols.expDate] = parseDate(p.expDate);
   values[cols.merk] = p.merk || '';
-  if (cols.kategori) values[cols.kategori] = p.kategori || '';
+  setIfCol(values, cols.kategori, kategori);
   values[cols.supplier] = p.supplier || '';
   values[cols.qty] = qty;
-  if (cols.unit) values[cols.unit] = p.unit;
+  setIfCol(values, cols.unit, p.unit);
   values[cols.ket] = p.ket || '';
 
   // Setiap kolom opsional diperiksa dulu: kalau tidak ada, indeksnya 0 dan
   // semua nilai akan saling menimpa di values[0] sebelum dibuang diam-diam.
   if (isDisposal) {
-    setIfCol(values, colOf(h, ['Alasan Musnah']), p.alasan);
+    setIfCol(values, colOf(h, ['Alasan Musnah', 'Alasan']), p.alasan);
     setIfCol(values, colOf(h, ['PIC']), p.pic);
+    // Tab Pemusnahan belum punya kolom untuk keduanya; kalau nanti ditambahkan,
+    // isinya langsung ikut tertulis tanpa perubahan kode.
+    setIfCol(values, colOf(h, ['Metode', 'Metode Pemusnahan']), p.metode);
+    setIfCol(values, colOf(h, ['Lokasi']), p.lokasi);
   } else {
     setIfCol(values, colOf(h, ['PIC Pengirim']), p.picPengirim);
     setIfCol(values, colOf(h, ['PIC Penerima']), p.picPenerima);
   }
 
-  writeRow(sheet, row, values);
+  var keluarBefore = ctx.cols[kind] ? num(ctx.sheet.getRange(masterRow, ctx.cols[kind]).getValue()) : 0;
+  var tulis = writeRow(sheet, row, values);
 
-  var master = bumpMaster(ctx, masterRow, kind, qty, body.actor);
+  var master = terapkanKeMaster_(ctx, masterRow, kind, qty, keluarBefore, current.sisaStok);
 
-  // Lot yang habis atau sudah lewat tanggal tidak boleh tetap tertulis AKTIF.
+  // Status tidak disentuh kalau isinya rumus. Di workbook ini Status adalah
+  // rumus tanggal kedaluwarsa — "TIDAK AKTIF" di sana berarti lewat exp date,
+  // bukan stok habis — dan menimpanya dengan teks mati menghapus arti itu
+  // untuk seterusnya. Lot yang habis sudah tampil sebagai "habis" di
+  // dashboard, dihitung dari Sisa Stok, jadi tidak ada yang hilang.
   if (ctx.cols.status && master.sisaAfter <= 0) {
-    ctx.sheet.getRange(masterRow, ctx.cols.status).setValue('TIDAK AKTIF');
-    master.statusSetTo = 'TIDAK AKTIF';
+    var selStatus = ctx.sheet.getRange(masterRow, ctx.cols.status);
+    if (String(selStatus.getFormula() || '') === '') {
+      selStatus.setValue('TIDAK AKTIF');
+      master.statusSetTo = 'TIDAK AKTIF';
+    }
   }
 
-  return { tab: sheet.getName(), row: row, master: master };
+  var hasil = { tab: sheet.getName(), row: row, master: master, dilewati: tulis.dilewati };
+  if (kategoriDitolak) {
+    hasil.kategoriDikosongkan = kategoriDitolak + ' (tidak ada di daftar validasi tab '
+      + sheet.getName() + ')';
+  }
+  return hasil;
 }
 
 /** Setel nilai hanya kalau kolomnya benar-benar ada di sheet. */
@@ -644,7 +940,21 @@ function setIfCol(values, col, value) {
   if (col) values[col] = value === undefined || value === null ? '' : value;
 }
 
-/** Tulis sekali jalan; kolom yang tidak ada di sheet (index 0) dilewati. */
+/**
+ * Tulis satu baris. Kolom yang tidak ada di sheet (indeks 0) dilewati, begitu
+ * juga sel yang sudah berisi rumus.
+ *
+ * Sel berumus tidak boleh ditimpa DAN tidak boleh ikut ditulis ulang: yang
+ * terbaca dari sel berumus adalah hasil hitungannya, jadi satu setValues()
+ * selebar baris mengganti setiap rumus di baris itu dengan angka mati. Di
+ * workbook ini hampir seluruh Master Stok berupa rumus — termasuk Nama Reagen
+ * dan Kode/Lot yang menjadi kunci semua rumus lain — sehingga sekali tulis
+ * selebar baris sudah cukup untuk memutus barisnya dari tab transaksi, tanpa
+ * ada satu pun tanda bahwa sesuatu berubah.
+ *
+ * Karena itu yang ditulis adalah deret kolom berdampingan yang semuanya bukan
+ * rumus; sel berumus di tengah baris memotong deretnya, bukan ikut terbawa.
+ */
 function writeRow(sheet, row, valuesByCol) {
   var maxCol = 0;
   for (var key in valuesByCol) {
@@ -653,15 +963,36 @@ function writeRow(sheet, row, valuesByCol) {
   }
   if (!maxCol) throw fail('SERVER', 'Tidak ada kolom yang bisa ditulis.');
 
-  var existing = sheet.getRange(row, 1, 1, maxCol).getValues()[0];
+  var rumus = sheet.getRange(row, 1, 1, maxCol).getFormulas()[0];
+  var isi = {};
+  var urut = [];
+  var dilewati = [];
+
   for (var col in valuesByCol) {
     var index = Number(col);
     if (!index) continue; // kolom tidak ditemukan di sheet ini
+    if (String(rumus[index - 1] || '') !== '') {
+      dilewati.push(colLetter(index) + row);
+      continue;
+    }
     var value = valuesByCol[col];
-    existing[index - 1] = value === null || value === undefined ? '' : value;
+    isi[index] = value === null || value === undefined ? '' : value;
+    urut.push(index);
   }
-  sheet.getRange(row, 1, 1, maxCol).setValues([existing]);
+
+  urut.sort(function (a, b) { return a - b; });
+  var i = 0;
+  while (i < urut.length) {
+    var j = i;
+    while (j + 1 < urut.length && urut[j + 1] === urut[j] + 1) j++;
+    var deret = [];
+    for (var k = i; k <= j; k++) deret.push(isi[urut[k]]);
+    sheet.getRange(row, urut[i], 1, deret.length).setValues([deret]);
+    i = j + 1;
+  }
+
   SpreadsheetApp.flush();
+  return { ditulis: urut.length, dilewati: dilewati };
 }
 
 /* ------------------------------------------------------------ perbaikan */
@@ -718,6 +1049,53 @@ function repairSisa(body) {
   SpreadsheetApp.flush();
 
   return { rows: rows, repaired: rows.length, dryRun: false };
+}
+
+/**
+ * Apa yang sebenarnya ada di sheet, dibaca saja.
+ *
+ * Dipakai waktu angkanya tidak bergerak seperti yang diharapkan. gviz hanya
+ * mengirim nilai, jadi rumus milik pemilik sheet tidak kelihatan dari luar —
+ * dan rumus itulah yang biasanya jadi penyebabnya (rentangnya berhenti di
+ * nomor baris tertentu, atau kuncinya tidak sama dengan yang ditulis).
+ */
+function inspect(body) {
+  var p = body.payload || {};
+  var ctx = masterContext();
+  var out = { master: { headerRow: ctx.headerRow, cols: ctx.cols } };
+
+  if (p.kode) {
+    var row = findMasterRow(ctx, p.kode, p.lot, p.nama);
+    out.master.row = row;
+    if (row) {
+      var sel = {};
+      var fields = ['kode', 'nama', 'lot', 'stokAwal', 'pembelian', 'hibah', 'titipan', 'distribusi', 'pemusnahan', 'sisaStok', 'status'];
+      for (var i = 0; i < fields.length; i++) {
+        var col = ctx.cols[fields[i]];
+        if (!col) continue;
+        var cell = ctx.sheet.getRange(row, col);
+        sel[fields[i]] = {
+          a1: colLetter(col) + row,
+          value: cell.getValue(),
+          formula: cell.getFormula() || '',
+        };
+      }
+      out.master.cells = sel;
+    }
+  }
+
+  // Sampai baris berapa setiap tab transaksi terisi, dan rumus contoh dari
+  // baris pertama berisi — rentang yang berhenti di nomor baris tertentu
+  // ketahuan dari sini.
+  out.tabs = {};
+  var names = [TABS.penerimaan, TABS.distribusi, TABS.pemusnahan];
+  for (var t = 0; t < names.length; t++) {
+    var sh = SpreadsheetApp.getActive().getSheetByName(names[t]);
+    if (!sh) continue;
+    out.tabs[names[t]] = { lastRow: sh.getLastRow(), lastColumn: sh.getLastColumn() };
+  }
+
+  return out;
 }
 
 /* ------------------------------------------------------------------ log */

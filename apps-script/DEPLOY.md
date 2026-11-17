@@ -95,26 +95,56 @@ Tombol "+ Tambah …" akan muncul di halaman Transaksi.
 
 ## Uji terima (jalankan di salinan)
 
-Lakukan berurutan dan periksa hasilnya langsung di spreadsheet.
+Kesembilan langkah ini sudah **diotomatiskan**. Setelah deployment jadi:
+
+```bash
+npm run accept -- --url <URL /exec> --token <token> --sheet <id salinan>
+```
+
+Ia menulis lewat Web App lalu membaca ulang hasilnya lewat gviz — jalur yang
+sama dengan dashboard, tanpa login — supaya yang memeriksa bukan skrip yang
+barusan menulisnya. Karena itu salinannya harus dibagikan **"Siapa saja yang
+memiliki link → Pelihat"**. Terhadap workbook produksi ia menolak jalan.
+
+Kalau mau dikerjakan tangan, lakukan berurutan dan periksa hasilnya langsung
+di spreadsheet.
 
 | # | Langkah | Yang harus terjadi |
 |---|---|---|
-| 1 | Tambah **Penerimaan** untuk lot yang sudah ada | Baris baru di tab Penerimaan; kolom **Pembelian** pada baris Master Stok yang cocok bertambah; **Sisa Stok** ikut naik |
-| 2 | Tambah **Penerimaan** dengan lot yang belum pernah ada | Baris baru di Penerimaan **dan** baris baru di Master Stok dengan Stok Awal = qty |
+| 1 | Tambah **Penerimaan** untuk lot yang sudah ada | Baris baru di tab Penerimaan; kolom masuk yang sesuai **Kategori**-nya (Stok Awal / Pembelian / Hibah / Titipan Daerah) pada baris Master Stok yang cocok bertambah; **Sisa Stok** ikut naik. Tidak boleh muncul baris Master Stok **kedua** untuk lot yang sama |
+| 2 | Tambah **Penerimaan** dengan lot yang belum pernah ada | Baris baru di Penerimaan, **dan** baris Master Stok untuk lot itu muncul sendiri dengan Sisa Stok = qty. Kolom **Kode** ikut terisi hanya kalau nama reagennya sudah terdaftar di tab **Daftar Kode** — itu rumus sheet, bukan yang dikirim dashboard |
 | 3 | Tambah **Distribusi** | Baris baru di tab Distribusi; kolom **Distribusi** di Master Stok bertambah; **Sisa Stok** turun |
 | 4 | Tambah **Pemusnahan** | Baris baru di tab Pemusnahan; kolom **Pemusnahan** bertambah; Sisa Stok turun |
 | 5 | Coba distribusi dengan qty lebih besar dari sisa stok | Ditolak dengan pesan "Sisa stok lot ini tinggal …" — tidak ada baris yang masuk |
 | 6 | Klik "Simpan" dua kali cepat | Hanya satu baris yang masuk; muncul pesan "Kiriman ini sudah tercatat sebelumnya" |
 | 7 | Periksa kolom **Sisa Stok** pada baris yang tersentuh | Isinya harus berupa **rumus** `=…`, bukan angka ketikan (klik selnya, lihat formula bar) |
 | 8 | Buka tab **Log** | Ada satu baris per penulisan: waktu, aksi, status, PIC, requestId, payload |
-| 9 | Distribusikan sampai sisa nol | Kolom Status baris itu berubah jadi `TIDAK AKTIF` |
+| 9 | Distribusikan sampai sisa nol | **Sisa Stok** jadi 0 dan kolom **Status** masih berupa rumus. Status di workbook ini adalah rumus tanggal kedaluwarsa — `TIDAK AKTIF` di sana berarti lewat exp date, bukan stok habis — jadi yang salah justru kalau ia tertulis sebagai teks. Lot habis ditandai dashboard sendiri, dari Sisa Stok |
+
+Kesembilan langkah ini **lulus di salinan pada 17 Nov 2026**, tiga kali
+berturut-turut.
 
 Kalau kesembilan langkah lulus, ulangi langkah 1–4 pemasangan di spreadsheet
 asli, lalu ganti URL di Pengaturan dashboard dengan URL deployment yang baru.
 
+> **Di workbook asli sudah ada skrip terikat milik orang lain** ("V2.6" /
+> LIMS Lite, ikut tersalin ke setiap salinan). Jangan hapus isinya untuk
+> ditimpa — tambahkan `Code.gs` sebagai berkas baru di proyek yang sama, atau
+> pastikan dulu skrip itu memang tidak dipakai.
+
 ---
 
 ## Yang dilakukan skrip ini
+
+**Master Stok tidak ditulisi sama sekali.** Di workbook ini seluruh barisnya
+turunan: Nama Reagen dan Kode/Lot adalah spill `UNIQUE()` dari tab Penerimaan,
+kolom masuk/keluar `SUMPRODUCT` ke tab transaksi, Sisa Stok penjumlahannya.
+Menambah baris transaksi memang sudah cukup — barisnya muncul dan berubah
+sendiri. Dua hal yang dijaga skrip ini karena itu: nama reagen dan nomor lot
+yang ditulis ke tab transaksi diambil **dari Master Stok**, bukan dari kiriman
+(satu spasi di ujung nama sudah cukup untuk membelah satu lot jadi dua baris),
+dan kalau rumus Master Stok kehabisan baris, rumusnya ditarik satu baris lagi
+dengan menyalin dari baris terakhir yang sudah benar.
 
 **Kolom yang berisi rumus tidak pernah ditimpa.** Kolom ringkasan di Master
 Stok (Pembelian, Hibah, Titipan Daerah, Distribusi, Pemusnahan) sudah berupa

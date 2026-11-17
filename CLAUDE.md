@@ -91,16 +91,74 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
     `Master Reagen` yang tidak ada. Halaman Kartu Stok membangun ulang kartunya
     dari tab transaksi, bukan membaca tab itu.
 
-11. **`apps-script/Code.gs` sudah disesuaikan ke susunan baru ini** (17 Nov
-    2026). Yang paling berbahaya sebelumnya bukan error, melainkan diamnya:
-    `colOf()` mengembalikan 0 untuk kolom yang hilang dan `writeRow` melewati
-    indeks 0, jadi nilainya hilang tanpa suara — dan `bumpMaster()` menimpa
-    rumus Sisa Stok milik pemilik sheet dengan rumus dua-kolom-masuk setiap
-    kali menulis. Sekarang: `sisaFormula()` menyusun rumus empat kolom masuk,
-    sel yang sudah berisi rumus tidak pernah ditimpa, `kolomMasuk()` memilih
-    kolom menurut Kategori, dan kolom opsional dijaga `setIfCol()`.
-    **Masih belum diuji di salinan workbook** — itu langkah berikutnya sebelum
-    mode input dipakai sungguhan.
+11. **Master Stok tidak menyimpan apa pun — ia menghitung dirinya sendiri.**
+    Ini temuan terpenting dari pengujian 17 Nov 2026, dan ia mengubah bentuk
+    mode input. Yang ada di sana semuanya rumus:
+
+    - `Nama Reagen` dan `Kode/Lot` adalah spill
+      `INDEX(UNIQUE(FILTER(Penerimaan!$E$5:$F$1041; …)); ROW()-4; COLUMN()-3)` —
+      daftar pasangan unik dari tab Penerimaan, urut kemunculan pertama.
+    - `Kode` dicari balik dari pasangan itu ke kolom Kode tab Penerimaan;
+      kolom Kode di tab Penerimaan **sendiri juga rumus**, yang mengambil kode
+      dari tab Daftar Kode menurut nama reagen. Reagen yang belum terdaftar di
+      sana memang tidak punya kode, dan tidak ada yang bisa menuliskannya.
+    - Kelima kolom masuk/keluar adalah `SUMPRODUCT` ke tab transaksi, dicocokkan
+      lewat **Nama Reagen + Kode/Lot sebagai teks apa adanya**.
+    - `Sisa Stok` penjumlahannya; `Status` rumus tanggal kedaluwarsa
+      (`IF(F<TODAY(); "TIDAK AKTIF"; "AKTIF")`) — **"TIDAK AKTIF" di sana
+      berarti lewat exp date, bukan stok habis.**
+
+    Akibatnya untuk mode input: **tidak ada satu sel pun di Master Stok yang
+    perlu, atau boleh, ditulis.** Cukup baris transaksinya; barisnya muncul dan
+    berubah sendiri. Tiga jebakan yang nyata-nyata terjadi waktu diuji:
+
+    - **Satu spasi membelah lot jadi dua.** Dashboard mengirim nama yang sudah
+      di-trim, sheet menyimpan `"ELISA ANTI-MEASLES VIRUS (IgM) "` dengan spasi
+      di ujung. `UNIQUE()` menganggapnya pasangan baru → muncul baris Master
+      Stok kedua untuk lot yang sama, stoknya terbelah, tidak ada yang error.
+      `identitasMaster()` sekarang mengambil nama dan lot **dari sheet**, bukan
+      dari kiriman.
+    - **Sekali `setValues()` selebar baris mematikan seluruh barisnya.** Nilai
+      yang terbaca dari sel berumus adalah hasil hitungannya; menuliskannya
+      kembali mengganti rumusnya dengan angka mati. `writeRow()` sekarang
+      melewati setiap sel berumus dan menulis per deret kolom berdampingan,
+      lalu melaporkan yang dilewati di `dilewati`.
+    - **Rumusnya habis di baris tertentu.** Lot ke-330 di sheet yang rumusnya
+      ditarik sampai baris 501 tetap muncul; lebih dari itu tidak muncul di mana
+      pun. `tarikBarisMaster_()` menyalin rumus satu baris ke bawah
+      (PASTE_FORMULA, hanya kolom yang memang berumus) lalu mencari ulang.
+
+    `findMasterRow()` mencoba Kode + Lot dulu (itu yang dikirim dashboard), lalu
+    **Nama + Lot** — kunci sejati workbook ini, satu-satunya yang menemukan lot
+    yang kodenya belum ada di Daftar Kode.
+
+12. **Tiap tab punya daftar validasi Kategori sendiri, dan isinya berbeda.**
+    Penerimaan kolom M: `Stok Awal / Pembelian 2026 / Hibah / Titipan Daerah`.
+    Distribusi kolom I: `Hibah / Titipan Daerah / **Pembelian**` — tanpa tahun,
+    dan tanpa "Stok Awal", yang justru kategori asal banyak lot.
+
+    Di penerimaan kategori **wajib dan harus persis**: ia yang menentukan qty-nya
+    masuk ke kolom yang mana, dan ejaan yang meleset mendarat di kolom lain
+    (atau tidak di mana pun) tanpa error. Daftarnya dibaca dari validasi selnya,
+    tidak dihafal di kode — tahun depan "Pembelian 2026" berganti sendiri.
+    Di baris keluar kategori cuma keterangan: yang tidak ada di daftar
+    **dikosongkan dan dilaporkan**, bukan dipakai menolak pengeluaran yang sah.
+
+13. **Kesembilan langkah uji terima lulus di salinan** (17 Nov 2026), tiga kali
+    berturut-turut: `npm run accept`. Dua harapan di daftar lama ternyata salah
+    dan sudah diperbaiki, bukan dipaksa lulus:
+
+    - "lot habis jadi TIDAK AKTIF" — Status adalah rumus tanggal kedaluwarsa;
+      menulis TIDAK AKTIF ke sana justru merusaknya. Yang diperiksa sekarang:
+      sisa benar-benar nol **dan rumus Status-nya masih utuh**.
+    - "lot baru punya kode sendiri" — kode ditentukan sheet dari Daftar Kode.
+      Lot baru dicari lewat nama + lot.
+
+    Yang masih tertinggal: `metode` dan `lokasi` di form pemusnahan dihapus
+    karena tab Pemusnahan tidak punya kolomnya (`setIfCol` akan mengisinya
+    sendiri kalau kolomnya ditambahkan), dan **mode input belum pernah dipasang
+    di workbook asli** — di sana sudah ada skrip terikat milik orang lain
+    ("V2.6" / LIMS Lite) yang tidak boleh ditimpa.
 
 ## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
 
@@ -219,18 +277,40 @@ berganti tema/palet tanpa disentuh.
 
 ## Mode input
 
-Membaca lewat gviz; menulis lewat Web App Apps Script yang **belum dipasang**.
-Selama endpoint kosong, dashboard berjalan penuh dalam mode baca dan halaman
-Transaksi menampilkan kartu penyiapan.
+Membaca lewat gviz; menulis lewat Web App Apps Script yang **sudah terpasang
+dan lulus uji di salinan, tapi belum di workbook asli**. Selama endpoint
+kosong, dashboard berjalan penuh dalam mode baca dan halaman Transaksi
+menampilkan kartu penyiapan.
 
-`apps-script/Code.gs` sudah ditulis dan `apps-script/DEPLOY.md` memuat langkah
-pemasangan serta daftar uji terima. Yang memasang adalah pemilik spreadsheet,
-bukan kita. **Uji di salinan workbook dulu, jangan di yang asli.**
+Salinan uji: `SALINAN UJI — Reagensia`
+(`1gaLJHMk6flH07mHl1zW6d-hdq44t9a_vyBfVh9oO_ec`), proyek Apps Script
+`1AWKm8_5jDecTOQP0W1yYyhLvACIV7ZnrPjaEIvYsLxZAZU_f4Bh6rDF6`, didorong lewat
+`clasp` dari folder `apps-script/` (`.clasp.json` sengaja tidak masuk repo).
+
+`apps-script/DEPLOY.md` memuat langkah pemasangan serta daftar uji terima. Yang
+memasang di workbook asli adalah pemilik spreadsheet, bukan kita — dan di sana
+**sudah ada skrip terikat milik orang lain** ("V2.6" / LIMS Lite) yang tidak
+boleh ditimpa begitu saja.
 
 Untuk menguji alur formnya tanpa menyentuh spreadsheet mana pun:
 `npm run mock` (token `rahasia-uji`), lalu isi halaman Pengaturan dengan
 `http://localhost:8787`. Tiruan itu mengikuti kontrak yang sama, termasuk
 penolakan kiriman ganda dan pemeriksaan sisa stok.
+
+Untuk menguji Code.gs yang sungguhan di salinan workbook:
+
+```bash
+cd apps-script && clasp push --force && clasp deploy -i <deploymentId>
+npm run accept -- --url <URL /exec> --token <token> --sheet <id salinan>
+```
+
+`tools/acceptance.mjs` **menolak berjalan terhadap workbook produksi** (dicocokkan
+dengan `CONFIG.spreadsheetId`). Salinannya harus dibagikan "siapa saja yang
+memiliki link → Pelihat": uji terima membaca ulang hasilnya lewat gviz tanpa
+login, persis seperti dashboard, supaya yang memeriksa bukan skrip yang barusan
+menulisnya. Setiap kali dijalankan ia meninggalkan satu lot uji dan beberapa
+baris transaksi bertanda "uji terima" — segarkan salinannya sebelum pengujian
+yang serius.
 
 ## Perintah
 

@@ -70,12 +70,31 @@ export function openTransactionForm(kind, { data, lot: preselected }) {
 
   const identity = [
     { key: 'instalasi', label: 'Instalasi', type: 'select', options: uniq(data.lots, (l) => l.instalasi), required: true },
-    { key: 'kode', label: 'Kode', required: true },
+    {
+      key: 'kode',
+      label: 'Kode',
+      required: true,
+      hint: kind === 'penerimaan'
+        ? 'Untuk reagen yang belum pernah tercatat, kode di sheet diisi sendiri dari tab Daftar Kode menurut nama reagennya.'
+        : undefined,
+    },
     { key: 'nama', label: 'Nama reagen', required: true, span: 2 },
     { key: 'lot', label: 'Kode/Lot', required: kind !== 'penerimaan' },
     { key: 'expDate', label: 'Tanggal kedaluwarsa', type: 'date' },
     { key: 'merk', label: 'Merk' },
-    { key: 'kategori', label: 'Kategori', type: 'select', options: uniq(data.lots, (l) => l.kategori) },
+    {
+      key: 'kategori',
+      label: 'Kategori',
+      type: 'select',
+      options: uniq(data.lots, (l) => l.kategori),
+      // Wajib di penerimaan: kategori inilah yang menentukan qty-nya masuk ke
+      // kolom Stok Awal, Pembelian, Hibah, atau Titipan Daerah di Master Stok.
+      // Penerimaan tanpa kategori tidak dihitung kolom mana pun.
+      required: kind === 'penerimaan',
+      hint: kind === 'penerimaan'
+        ? 'Menentukan kolom masuk mana yang bertambah di Master Stok.'
+        : undefined,
+    },
     { key: 'supplier', label: 'Supplier', type: 'select', options: uniq(data.lots, (l) => l.supplier), span: 2 },
   ];
 
@@ -107,9 +126,11 @@ export function openTransactionForm(kind, { data, lot: preselected }) {
         options: ['Kedaluwarsa', 'Rusak', 'Kemasan bocor', 'Terkontaminasi', 'Penyimpanan tidak sesuai'],
         required: true,
       },
-      { key: 'metode', label: 'Metode pemusnahan', type: 'select', options: ['Insinerator', 'Pihak ketiga berizin', 'Netralisasi', 'Limbah B3'], required: true },
+      // Metode pemusnahan dan Lokasi tidak ada di sini: tab Pemusnahan tidak
+      // punya kolom untuk keduanya, dan field yang isinya tidak tersimpan di
+      // mana pun lebih buruk daripada field yang tidak ditanyakan. Code.gs
+      // sudah menulisnya lewat setIfCol begitu kolomnya ditambahkan di sheet.
       { key: 'pic', label: 'PIC', required: true, value: CONFIG.actor },
-      { key: 'lokasi', label: 'Lokasi', type: 'select', options: uniq(data.lots, (l) => l.lokasi) },
       { key: 'ket', label: 'Keterangan', span: 2 },
     ],
   }[kind];
