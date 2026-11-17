@@ -62,6 +62,7 @@ line('Tanpa tanggal kedaluwarsa', s.audit.missingExpiry.length);
 line('Tanpa supplier', s.audit.missingSupplier.length);
 line('Tanpa nomor lot', s.audit.missingLot.length);
 line('Baris transaksi tanpa induk di Master Stok', s.audit.orphans.length);
+line('Baris transaksi berkode beda dari Master Stok', s.audit.kodeBeda.length);
 
 console.log('\nDOKUMEN (baris penerimaan)');
 line('COA tersedia', `${s.docs.coaCount} / ${s.docs.total}  (${s.docs.coaPct}%)`);

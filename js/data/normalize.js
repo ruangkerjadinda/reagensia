@@ -41,18 +41,46 @@ export function daysBetween(from, to) {
 
 const norm = (s) => String(s ?? '').toUpperCase().replace(/\s+/g, ' ').trim();
 
-/** Kunci gabungan Kode + Lot, dipakai untuk menyambung antar tab. */
-export function lotKey(kode, lot) {
-  return `${norm(kode)}|${norm(lot)}`;
+/**
+ * Kunci gabungan **Nama Reagen + Kode/Lot**, dipakai untuk menyambung antar tab.
+ *
+ * Ini kunci sejati workbook ini, bukan pilihan kita: seluruh rumus Master Stok
+ * mencocokkan transaksinya lewat Nama + Lot sebagai teks apa adanya, dan
+ * barisnya sendiri lahir dari `UNIQUE(FILTER(Penerimaan!E:F))` — pasangan yang
+ * sama persis. Kode justru kolom turunan; di tab Penerimaan ia rumus yang
+ * mengambil kode dari tab Daftar Kode menurut nama reagen, dan di tab
+ * Distribusi ia diketik tangan.
+ *
+ * Dulu kunci ini memakai Kode + Lot, dan itu diam-diam salah: lima baris
+ * Distribusi (80, 82, 83, 92, 95 per 17 Nov 2026) menulis kode yang berbeda
+ * untuk nama dan lot yang sama — `IMB-0080` di satu baris, `IMB-0072` di baris
+ * lain, untuk lot yang identik. Sheet-nya menghitung semuanya dengan benar
+ * karena ia mengabaikan Kode; dashboard tidak, jadi transaksinya menggantung
+ * dan Kartu Stok satu lot berakhir di 13 sementara Inventori bilang 8. Tidak
+ * ada yang merah di mana pun.
+ *
+ * Lot sendirian **bukan** pengganti yang aman: ada 14 nomor lot yang dipakai
+ * lebih dari satu reagen.
+ */
+export function lotKey(nama, lot) {
+  return `${norm(nama)}|${norm(lot)}`;
 }
 
 /**
- * Tab Pemusnahan tidak punya kolom Kode sama sekali, jadi barisnya tidak bisa
- * langsung dikunci ke Master Stok. Kodenya dicari lewat Nama Reagen + Kode/Lot
- * — pasangan itu unik di Master Stok untuk seluruh baris pemusnahan yang ada —
- * dan kalau namanya meleset, lot sendirian dipakai sebagai cadangan, tapi hanya
- * kalau lot itu cuma dimiliki satu kode (ada 14 nomor lot yang dipakai lebih
- * dari satu reagen; menebak di situ akan memindahkan transaksi ke lot lain).
+ * Kode untuk ditampilkan, dan kode yang seharusnya menurut Master Stok.
+ *
+ * Dua kebutuhan yang berbeda, dari peta yang sama:
+ *
+ * - Tab Pemusnahan tidak punya kolom Kode sama sekali, jadi kodenya dicari
+ *   lewat Nama Reagen + Kode/Lot. Kalau namanya meleset, lot sendirian dipakai
+ *   sebagai cadangan — tapi hanya kalau lot itu cuma dimiliki satu kode (ada 14
+ *   nomor lot yang dipakai lebih dari satu reagen; menebak di situ akan
+ *   memindahkan transaksi ke lot orang lain).
+ * - Baris yang **punya** kode sendiri tetap memakai kodenya, tapi kode milik
+ *   Master Stok ikut dikembalikan supaya keduanya bisa dibandingkan. Sejak
+ *   penguncian pindah ke Nama + Lot, kode yang berbeda tidak lagi memutus
+ *   hubungan baris itu — ia jadi temuan tersendiri di halaman Audit, yang
+ *   memang bisa dirapikan di sheet.
  */
 function kodeResolver(masterRows) {
   const byNamaLot = new Map();
@@ -69,9 +97,10 @@ function kodeResolver(masterRows) {
   }
 
   return (row) => {
-    if (row.kode) return { kode: row.kode, resolved: false };
-    const hit = byNamaLot.get(`${norm(row.nama)}|${norm(row.lot)}`) || byLot.get(norm(row.lot)) || '';
-    return { kode: hit, resolved: Boolean(hit) };
+    const kodeMaster = byNamaLot.get(`${norm(row.nama)}|${norm(row.lot)}`) || '';
+    if (row.kode) return { kode: row.kode, resolved: false, kodeMaster };
+    const hit = kodeMaster || byLot.get(norm(row.lot)) || '';
+    return { kode: hit, resolved: Boolean(hit), kodeMaster };
   };
 }
 
@@ -104,12 +133,17 @@ export function normalize(tables, options = {}) {
 
   /** Lengkapi kode yang tidak ada di tabnya, lalu kunci barisnya ke lot. */
   const withKey = (rows, extra) => (rows || []).filter(hasIdentity).map((r) => {
-    const { kode, resolved } = resolveKode(r);
+    const { kode, resolved, kodeMaster } = resolveKode(r);
     return {
       ...r,
       kode,
       kodeDariMaster: resolved,
-      key: lotKey(kode, r.lot),
+      kodeMaster,
+      // Kode yang diketik di tab transaksi berbeda dari kode lot itu di Master
+      // Stok. Tidak memutus apa pun — penguncian memakai Nama + Lot — tapi
+      // salah satunya memang salah ketik, dan itu layak dilaporkan.
+      kodeBeda: Boolean(r.kode && kodeMaster && norm(r.kode) !== norm(kodeMaster)),
+      key: lotKey(r.nama, r.lot),
       qty: num(r.qty),
       ...(extra ? extra(r) : null),
     };
@@ -127,7 +161,7 @@ export function normalize(tables, options = {}) {
 
   const cards = (tables.kartuStok || []).filter((r) => r.nama || r.instalasi).map((r) => ({
     ...r,
-    key: lotKey('', r.lot),
+    key: lotKey(r.nama, r.lot),
     masuk: num(r.masuk),
     keluar: num(r.keluar),
     saldo: num(r.saldo),
@@ -169,7 +203,7 @@ export function normalize(tables, options = {}) {
   const disposalsByKey = groupBy(disposals, (r) => r.key);
 
   const lots = masterRows.map((r) => {
-    const key = lotKey(r.kode, r.lot);
+    const key = lotKey(r.nama, r.lot);
     const { bucket, days } = bucketFor(r.expDate, today, thresholds);
 
     const stokAwal = num(r.stokAwal);
@@ -244,13 +278,22 @@ export function normalize(tables, options = {}) {
     };
   });
 
-  // Baris transaksi yang kodenya tidak ada di Master Stok — kandidat salah ketik.
+  // Baris transaksi yang nama + lot-nya tidak ada di Master Stok — kandidat
+  // salah ketik. Sekarang ini berarti baris yang benar-benar menggantung:
+  // sheet-nya pun tidak menghitungnya di kolom mana pun.
   const masterKeys = new Set(lots.map((l) => l.key));
   const orphans = [...issues, ...disposals, ...receipts]
     .filter((r) => !masterKeys.has(r.key))
     .map((r) => ({ tab: r._tab, row: r._row, kode: r.kode, lot: r.lot, nama: r.nama }));
 
-  return { lots, receipts, issues, disposals, cards, orphans, today, thresholds };
+  // Kode yang diketik di tab transaksi berbeda dari kode lot itu di Master
+  // Stok. Barisnya tetap terhubung — sheet dan dashboard sama-sama mengunci
+  // lewat Nama + Lot — jadi ini soal kerapian, bukan angka.
+  const kodeBeda = [...issues, ...disposals, ...receipts]
+    .filter((r) => r.kodeBeda && masterKeys.has(r.key))
+    .map((r) => ({ tab: r._tab, row: r._row, kode: r.kode, kodeMaster: r.kodeMaster, lot: r.lot, nama: r.nama }));
+
+  return { lots, receipts, issues, disposals, cards, orphans, kodeBeda, today, thresholds };
 }
 
 export function groupBy(items, keyFn) {

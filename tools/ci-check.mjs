@@ -84,7 +84,7 @@ if (!errors.length) {
 
   notes.push(`${s.totalLots} lot · ${s.totalReagen} reagen · ${s.totalStok} unit.`);
   notes.push(`Rekonsiliasi: ${s.reconciliation.map((r) => `${r.label} ${r.ok ? 'cocok' : 'MELESET'}`).join(' · ')}`);
-  notes.push(`Kualitas data (tidak menggagalkan): ${s.audit.total} baris perlu dirapikan, ${s.audit.sisaMismatch.length} Sisa Stok tidak cocok, ${s.audit.orphans.length} baris transaksi tanpa induk.`);
+  notes.push(`Kualitas data (tidak menggagalkan): ${s.audit.total} baris perlu dirapikan, ${s.audit.sisaMismatch.length} Sisa Stok tidak cocok, ${s.audit.orphans.length} baris transaksi tanpa induk, ${s.audit.kodeBeda.length} baris berkode beda.`);
 }
 
 /* ------------------------------------------------------------- laporan */

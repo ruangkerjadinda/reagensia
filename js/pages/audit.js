@@ -142,7 +142,21 @@ export function render({ data, summary }) {
       tone: 'warn',
       icon: 'alert',
       title: `${audit.orphans.length} baris transaksi tidak punya pasangan di Master Stok`,
-      body: `Kombinasi Kode + Kode/Lot pada baris ini tidak ditemukan di Master Stok, biasanya karena beda penulisan lot: ${audit.orphans.map((o) => `${o.tab} baris ${o.row} (${o.kode})`).join(', ')}.`,
+      body: 'Kombinasi Nama Reagen + Kode/Lot pada baris ini tidak ditemukan di Master Stok, biasanya karena beda penulisan lot. '
+        + 'Rumus di sheet mencocokkan pasangan yang sama, jadi qty-nya juga tidak terhitung di kolom mana pun: '
+        + `${audit.orphans.map((o) => `${o.tab} baris ${o.row} (${o.nama || o.kode})`).join(', ')}.`,
+    }));
+  }
+
+  /* ------------------------------------------- kode beda dari Master Stok */
+
+  if (audit.kodeBeda.length) {
+    page.append(notice({
+      tone: 'info',
+      icon: 'info',
+      title: `${audit.kodeBeda.length} baris transaksi memakai Kode yang berbeda dari Master Stok`,
+      body: 'Angkanya tetap benar — sheet maupun dashboard mencocokkan lewat Nama Reagen + Kode/Lot, bukan Kode — tapi salah satu kodenya salah ketik: '
+        + `${audit.kodeBeda.map((o) => `${o.tab} baris ${o.row} (${o.kode} → ${o.kodeMaster})`).join(', ')}.`,
     }));
   }
 

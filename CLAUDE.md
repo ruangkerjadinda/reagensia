@@ -69,6 +69,21 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
    saja** — ada 14 nomor lot yang dipakai lebih dari satu reagen, dan menebak di
    situ akan memindahkan transaksi ke lot orang lain.
 
+5a. **Kunci antar tab adalah Nama Reagen + Kode/Lot, bukan Kode.** Ini bukan
+    pilihan desain kita — seluruh rumus Master Stok mencocokkan transaksinya
+    begitu, dan barisnya lahir dari `UNIQUE(FILTER(Penerimaan!E:F))`, pasangan
+    yang sama persis. Kode justru turunan: di Penerimaan ia rumus dari tab
+    Daftar Kode, di Distribusi ia diketik tangan. Sampai 17 Nov 2026
+    `normalize.js` memakai Kode + Lot, dan itu diam-diam salah: lima baris
+    Distribusi menulis kode berbeda untuk nama dan lot yang sama (`IMB-0080`
+    di baris 80/83/95, `IMB-0072` di baris 99/101/103/109 — lot identik).
+    Sheet-nya menghitung semuanya karena ia mengabaikan Kode; dashboard tidak,
+    jadi tiga lot kehilangan 8 unit keluar dan Kartu Stok-nya berakhir di angka
+    yang berbeda dari Inventori — tanpa satu pun temuan merah, karena Sisa Stok
+    dibaca dari sheet dan bukan dihitung ulang. Kode yang berbeda sekarang jadi
+    temuan tersendiri (`audit.kodeBeda`), bukan pemutus hubungan. **Lot
+    sendirian tetap bukan pengganti yang aman** — lihat catatan 5.
+
 6. **gid Distribusi dan Pemusnahan tertukar di `config.js`.** Sudah diperiksa
    lewat `/export?format=csv&gid=…` dan diperbaiki: Distribusi `2097351299`,
    Pemusnahan `1861623006`. Sebelumnya tautan "Buka di Sheets" dari kedua tab itu
@@ -189,7 +204,7 @@ Pertanyaan yang berulang dari Dinda. Jawabannya berbeda-beda per kasus:
 Kolom **baru** yang disisipkan di tengah tidak merusak apa pun — itu memang
 alasan pencocokan label didahulukan.
 
-## Angka acuan (16 Nov 2026)
+## Angka acuan (17 Nov 2026)
 
 Dipakai untuk memastikan tidak ada yang rusak setelah perubahan. Jalankan
 `npm run verify`. Angka ini bergerak sendiri setiap kali Dinda mengisi sheet —
@@ -197,15 +212,16 @@ yang penting bukan nilainya persis, tapi tiga baris terakhir tetap **cocok**.
 
 | | |
 |---|---|
-| Lot / reagen / total stok | 326 · 236 · 3118 |
+| Lot / reagen / total stok | 326 · 236 · 3097 |
 | Risiko (expired / ≤30 / ≤90 / ≤180 / aman / tanpa tanggal) | 98 · 11 · 17 · 22 · 97 · 81 |
-| Stok rendah / habis | 200 · 111 |
+| Stok rendah / habis | 201 · 115 |
 | Kedaluwarsa tapi AKTIF | 0 |
 | Sisa Stok tidak cocok | 0 |
 | Tanpa supplier / tanpa lot | 112 · 53 |
 | COA / MSDS | 54 · 39 dari 326 baris penerimaan |
+| Baris transaksi tanpa induk / berkode beda | 0 · 5 |
 | Baris berbeda yang perlu dirapikan | 186 |
-| Rekonsiliasi | Penerimaan ✓ 3646=3646 · Distribusi ✓ 114=114 · Pemusnahan ✓ 414=414 |
+| Rekonsiliasi | Penerimaan ✓ 3646=3646 · Distribusi ✓ 135=135 · Pemusnahan ✓ 414=414 |
 
 Pemetaan kolom harus melaporkan **"semua field tercocokkan lewat label"**. Satu
 baris peringatan saja berarti susunan sheet berubah lagi.

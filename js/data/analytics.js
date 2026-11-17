@@ -14,7 +14,7 @@ const uniqSorted = (items, pick) => [...new Set(items.map(pick).filter(Boolean))
 
 /** Ringkasan menyeluruh — dipakai dashboard, halaman audit, dan skrip verifikasi. */
 export function summarize(data) {
-  const { lots, receipts, issues, disposals, orphans } = data;
+  const { lots, receipts, issues, disposals, orphans, kodeBeda } = data;
 
   const buckets = {};
   for (const key of Object.values(BUCKET)) {
@@ -30,6 +30,7 @@ export function summarize(data) {
     missingSupplier: lots.filter((l) => l.missingSupplier),
     missingLot: lots.filter((l) => l.missingLot),
     orphans,
+    kodeBeda: kodeBeda || [],
   };
   audit.duplicates = nearDuplicates(lots);
   // Satu baris bisa kena beberapa temuan sekaligus, jadi yang dihitung adalah
@@ -38,7 +39,7 @@ export function summarize(data) {
   for (const key of ['expiredButActive', 'validButInactive', 'sisaMismatch', 'missingExpiry', 'missingSupplier', 'missingLot']) {
     for (const lot of audit[key]) touched.add(lot._row);
   }
-  audit.total = touched.size + orphans.length;
+  audit.total = touched.size + orphans.length + audit.kodeBeda.length;
 
   const coaCount = receipts.filter((r) => r.hasCoa).length;
   const msdsCount = receipts.filter((r) => r.hasMsds).length;
