@@ -463,24 +463,25 @@ di repositori ini, yang publik.
 ### Tanggal yang tidak pernah ada
 
 Dua sel Exp. Date di Master Stok berisi tanggal yang tidak ada di kalender:
-baris 208  (MIXING HPV PIDIE, 23 unit) dan baris 242
- (MHA). Keduanya tulisan, bukan tanggal.
+baris 208 `31 Feb 2026` (MIXING HPV PIDIE, 23 unit) dan baris 242
+`31 Nov 2029` (MHA). Keduanya tulisan, bukan tanggal.
 
 **Dashboard tidak bisa melihatnya sama sekali.** Kolomnya bertipe tanggal,
 jadi gviz mengembalikan sel seperti itu sebagai kosong — tidak ada cara
 membedakannya dari sel yang memang belum diisi. Skrip Apps Script membacanya
 langsung, jadi ia bisa.
 
-Sempat ada akibatnya yang halus:  menggulung sendiri
-jadi 3 Maret, jadi surel melaporkan reagen itu kedaluwarsa karena tanggal yang
-tidak pernah ada — dan angkanya (3 lot) berbeda dari kartu di Dashboard (2 lot)
-untuk hal yang persis sama.  sekarang **ketat**: hanya
-nilai Date yang diterima, dan tulisan yang bukan tanggal dilaporkan sebagai
-temuan tersendiri di surel. , , dan  tidak ikut dilaporkan karena
-itu penanda "tidak punya masa kedaluwarsa" yang memang disengaja.
+Akibatnya halus dan sempat terjadi: `new Date("31 Feb 2026")` menggulung
+sendiri jadi 3 Maret, jadi surel melaporkan reagen itu kedaluwarsa karena
+tanggal yang tidak pernah ada — dan angkanya (3 lot) berbeda dari kartu di
+Dashboard (2 lot) untuk hal yang persis sama. `notifBacaTanggal_()`
+sekarang **ketat**: hanya nilai Date yang diterima, dan tulisan yang bukan
+tanggal dilaporkan sebagai temuan tersendiri di surel. `-`, `NA` dan
+`n/a` tidak ikut dilaporkan, karena itu penanda "tidak punya masa
+kedaluwarsa" yang memang disengaja.
 
-Sesudah diperbaiki keduanya sepakat: 2 lot kedaluwarsa + 8 kritis = 10,
-dan 136 lot tanpa tanggal di kedua sisi.
+Sesudah diperbaiki keduanya sepakat: 2 lot kedaluwarsa + 8 kritis = 10 lot
+yang dikabarkan, dan 136 lot tanpa tanggal di kedua sisi.
 
 ### Scope baru butuh otorisasi ulang sekali
 
