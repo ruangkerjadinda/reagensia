@@ -20,7 +20,7 @@ import { el, cardHead, chip, kpi, btn, notice, empty, fmtNum, fmtDate, fmtDays, 
 import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { bucketChip, sheetLinkBtn } from '../ui/shared.js';
-import { printWithTitle } from '../ui/export.js';
+import { printDocument } from '../ui/export.js';
 import { groupBy, BUCKET } from '../data/normalize.js';
 import { APP } from '../config.js';
 
@@ -614,7 +614,7 @@ function cetak(jenis, periode, laporan, data) {
     ? `Periode ${periode.label}`
     : `Keadaan per ${fmtDate(data.today)}`;
 
-  const host = el('div.print-only', { id: 'print-host' },
+  const isi = el('div', {},
     el('div.print-head', {},
       el('h1', { text: jenis.judul }),
       el('div.meta', { text: `${APP.name} · ${subjudul} · ${lingkup}` }),
@@ -627,13 +627,7 @@ function cetak(jenis, periode, laporan, data) {
       el('div', {}, 'Dibuat oleh', el('div.rule', { text: 'Penanggung jawab reagen' })),
       el('div', {}, 'Diketahui oleh', el('div.rule', { text: 'Kepala Instalasi' }))));
 
-  document.body.append(host);
-  const bersihkan = () => {
-    host.remove();
-    window.removeEventListener('afterprint', bersihkan);
-  };
-  window.addEventListener('afterprint', bersihkan);
-  printWithTitle(`${jenis.judul} — ${jenis.periodik ? periode.label : fmtDate(data.today)}`);
+  printDocument(isi, `${jenis.judul} — ${jenis.periodik ? periode.label : fmtDate(data.today)}`);
 }
 
 function tabelCetak(spec, bernomor = false) {

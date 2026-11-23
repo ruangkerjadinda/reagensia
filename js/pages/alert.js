@@ -3,7 +3,7 @@ import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { buildAlerts, SEVERITY_META } from '../data/analytics.js';
 import { filterBar, applyFilters, bucketChip, openLotDrawer } from '../ui/shared.js';
-import { printWithTitle, copyText } from '../ui/export.js';
+import { printDocument, copyText } from '../ui/export.js';
 import { toast } from '../ui/overlay.js';
 import { groupBy } from '../data/normalize.js';
 
@@ -112,7 +112,7 @@ function alertTable(alert) {
 
 /** Cetak per instalasi — bentuk yang biasa dibagikan ke tiap unit. */
 function printAlerts(alerts, data) {
-  const host = el('div.print-only', {},
+  const isi = el('div', {},
     el('div.print-head', {},
       el('h1', { text: 'Daftar Tindak Lanjut Reagen' }),
       el('div.meta', { text: `Dicetak ${fmtDate(new Date())} · acuan tanggal ${fmtDate(data.today)}` })),
@@ -134,10 +134,7 @@ function printAlerts(alerts, data) {
       el('div', {}, 'Dibuat oleh', el('div.rule', { text: 'Penanggung jawab reagen' })),
       el('div', {}, 'Diketahui oleh', el('div.rule', { text: 'Kepala Instalasi' }))));
 
-  document.body.append(host);
-  const cleanup = () => { host.remove(); window.removeEventListener('afterprint', cleanup); };
-  window.addEventListener('afterprint', cleanup);
-  printWithTitle(`Tindak Lanjut Reagen ${fmtDate(data.today)}`);
+  printDocument(isi, `Tindak Lanjut Reagen ${fmtDate(data.today)}`);
 }
 
 function alertText(alerts, data) {

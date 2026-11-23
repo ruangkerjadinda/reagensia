@@ -5,7 +5,7 @@ import { expiryTimeline } from '../charts/timeline.js';
 import { expiryTimeline as buildTimeline } from '../data/analytics.js';
 import { BUCKET, BUCKET_META } from '../data/normalize.js';
 import { filterBar, applyFilters, bucketChip, statusChip, openLotDrawer } from '../ui/shared.js';
-import { printWithTitle, copyText } from '../ui/export.js';
+import { printDocument, copyText } from '../ui/export.js';
 import { toast } from '../ui/overlay.js';
 
 export const meta = {
@@ -138,7 +138,7 @@ function monthKey(d) {
  * ditandatangani, bukan sekadar dibaca di layar.
  */
 function printDisposal(expired, data) {
-  const host = el('div.print-only', { id: 'print-host' },
+  const isi = el('div', {},
     el('div.print-head', {},
       el('h1', { text: 'Usulan Pemusnahan Reagen Kedaluwarsa' }),
       el('div.meta', { text: `Dicetak ${fmtDate(new Date())} · ${expired.length} lot · ${fmtNum(expired.reduce((a, l) => a + l.sisaStok, 0))} unit` })),
@@ -162,13 +162,7 @@ function printDisposal(expired, data) {
       el('div', {}, 'Diusulkan oleh', el('div.rule', { text: 'Penanggung jawab reagen' })),
       el('div', {}, 'Diketahui oleh', el('div.rule', { text: 'Kepala Instalasi' }))));
 
-  document.body.append(host);
-  const cleanup = () => {
-    host.remove();
-    window.removeEventListener('afterprint', cleanup);
-  };
-  window.addEventListener('afterprint', cleanup);
-  printWithTitle(`Usulan Pemusnahan ${fmtDate(data.today)}`);
+  printDocument(isi, `Usulan Pemusnahan ${fmtDate(data.today)}`);
 }
 
 function disposalText(expired, data) {

@@ -13,6 +13,7 @@ import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { filterBar, applyFilters, bucketChip } from '../ui/shared.js';
 import { printWithTitle } from '../ui/export.js';
+import { cetakLabel, UKURAN_BAKU } from '../ui/label.js';
 
 export const meta = {
   title: 'Kartu Stok',
@@ -215,6 +216,9 @@ function card(lot, data) {
     el('div.toolbar.no-print', {},
       btn('Kembali ke daftar', { icon: 'kembali', variant: 'ghost', onclick: () => setParams({ lot: '' }) }),
       el('span.spacer'),
+      // Satu stiker untuk botol lot ini. Bentuknya sama persis dengan yang
+      // dicetak selembar di halaman Label — satu-satunya bedanya jumlahnya.
+      btn('Cetak label', { icon: 'cetak', variant: 'ghost', onclick: () => cetakLabel([lot], UKURAN_BAKU, `Label — ${lot.nama}`) }),
       btn('Cetak kartu', { icon: 'cetak', onclick: () => printWithTitle(`Kartu Stok — ${lot.nama}`) })),
 
     // Versi cetak dibangun terpisah, bukan versi layar yang disembunyikan

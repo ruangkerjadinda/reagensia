@@ -4,7 +4,11 @@
  */
 
 @media print {
-  @page { margin: 14mm; size: A4; }
+  /* 10 mm, bukan 14: tiga kolom label 6 cm butuh 184 mm lebar, dan margin
+   * 14 mm hanya menyisakan 182 mm. Dokumen lain ikut melebar sedikit —
+   * kartu stok yang dulu terukur 161 mm dari 269 mm ruang cetak sekarang
+   * punya 277 mm, jadi ia tetap muat satu lembar. */
+  @page { margin: 10mm; size: A4; }
 
   :root {
     --plane: #fff; --plane-tint: #fff; --surface: #fff; --surface-raised: #fff; --surface-sunken: #fff;
@@ -31,6 +35,13 @@
   .card { border: 1px solid #bbb; break-inside: avoid; padding: 8pt; }
 
   .print-only { display: block !important; }
+
+  /* Dokumen cetak lepas (berita acara, laporan, lembar label) MENGGANTIKAN
+   * halaman yang sedang dibuka. Aturan di atas hanya menyembunyikan
+   * kerangkanya; tanpa baris ini kartu-kartu halaman ikut tercetak lebih
+   * dulu dan dokumen yang mau ditandatangani baru muncul di halaman kedua.
+   * Penanda kelasnya dipasang `printDocument()` di js/ui/export.js. */
+  body.sedang-cetak .main { display: none !important; }
   .print-head { margin-bottom: 10pt; border-bottom: 1.5pt solid #000; padding-bottom: 6pt; }
   .print-head h1 { font-size: 14pt; }
   .print-head .meta { font-size: 9pt; color: #444; margin-top: 3pt; }
@@ -54,6 +65,23 @@
     font-weight: 700; border-top: 1pt solid #000; border-bottom: 0;
     background: #f3f3f3 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact;
   }
+
+  /* --------------------------------------------------- label stiker mini
+   *
+   * Bentuk labelnya ada di css/app.css dalam milimeter dan dipakai sama
+   * persis oleh pratinjau layar; di sini hanya yang khas kertas: warna
+   * dipaksa hitam-putih, dan garis putus-putus panduan gunting dipastikan
+   * ikut tercetak walau pencetakan latar dimatikan. */
+  .label-host .label {
+    background: #fff !important; color: #000 !important;
+    border: 0.3mm dashed #777 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .label-host .label-id,
+  .label-host .label-suhu,
+  .label-host .label-isian b { color: #333 !important; }
+  .label-host .label-isian i { border-bottom-color: #000 !important; }
+  .label-host .b3-ikon { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* Tanda tangan di kaki dokumen resmi. */
   .print-sign { margin-top: 24pt; display: flex; gap: 40pt; break-inside: avoid; }

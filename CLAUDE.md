@@ -269,7 +269,7 @@ js/data/store.js      cache localStorage, stale-while-revalidate, status luring
 js/data/writer.js     klien mode input
 js/ui/                router, tabel, form, laci, dialog, palet, ikon
 js/charts/            SVG buatan sendiri (timeline, meter) — tanpa CDN
-js/pages/             sebelas halaman
+js/pages/             dua belas halaman
 apps-script/          backend opsional + panduan pasang
 tools/                verify-data, build-snapshot, mock-endpoint, dev-server
 ```
@@ -367,6 +367,57 @@ atau kolom "Baris" yang hanya berguna di layar. Angkanya diverifikasi langsung
 ke sheet saat dibuat (24 Nov 2026): penerimaan November 106 baris / 2.712 unit
 / 101 jenis / 6 instalasi, distribusi seluruh periode 113 baris / 135 unit,
 kedaluwarsa 98 lot — ketiganya cocok persis dengan hitungan langsung dari gviz.
+
+## Label stiker
+
+Stiker mini untuk ditempel di botol reagen, dua ukuran yang diminta Dinda:
+6×4 cm dan 5×3 cm. Bentuk labelnya ada di `js/ui/label.js` dan dipakai
+bersama oleh halaman Label (`js/pages/label.js`, selembar penuh) dan tombol
+"Cetak label" di Kartu Stok (satu stiker) — supaya keduanya tidak pernah
+berbeda bentuk.
+
+**Tiga kolom untuk kedua ukuran.** Empat label 5 cm butuh 200 mm sementara
+A4 hanya 210 mm, jadi margin halamannya harus ditekan sampai 5 mm — lebih
+dekat ke tepi daripada yang bisa dicetak banyak pencetak. Kolom terakhirnya
+akan terpotong di sebagian pencetak dan utuh di sebagian lain, dan itu baru
+ketahuan setelah stikernya tercetak. Tiga kolom aman di mana pun; sela antar
+label justru tempat menggunting.
+
+**Margin `@page` turun dari 14 mm ke 10 mm** supaya tiga kolom 6 cm (184 mm)
+muat di 190 mm ruang cetak. Ini mengubah seluruh dokumen cetak, bukan cuma
+label — tapi arahnya melonggarkan, jadi kartu stok yang dulu terukur 161 mm
+dari 269 mm sekarang punya 277 mm dan tetap muat satu lembar. Terukur
+24 Nov 2026: label 6×4 persis 60×40 mm dengan grid 184 mm, label 5×3 persis
+50×30 mm dengan grid 154 mm, keduanya di bawah 190 mm.
+
+Jumlah per lembar (`baris` di `UKURAN_LABEL`) dihitung dari 277 mm dengan
+sela 2 mm: 6×4 → 6 baris (18 label), 5×3 → 8 baris (24 label). **Hitung ulang
+kalau tinggi, sela, atau margin halamannya diubah** — angkanya dipakai
+memberi tahu pengguna berapa lembar yang akan keluar.
+
+Memilih lot pakai centang, bukan "cetak semua yang tampil": stiker dicetak
+untuk botol yang baru datang, dan mencetak 381 label karena filternya kelewat
+longgar menghabiskan satu rim kertas stiker yang tidak bisa ditarik kembali.
+Pilihannya disimpan di memori modul, bukan di URL — 60 nomor lot tidak muat
+di tautan.
+
+Simbol B3 ikut kalau kolom Simbol B3 sudah diisi. Kalau belum, labelnya
+tercetak tanpa simbol **dan halamannya mengatakan berapa banyak yang begitu**:
+yang memegang stiker tidak bisa membedakan "tidak berbahaya" dari "belum
+diperiksa", jadi perbedaan itu harus disebut sebelum stikernya dicetak.
+
+### Dokumen cetak lepas
+
+`printDocument()` di `js/ui/export.js` dipakai keempat dokumen cetak terpisah
+(berita acara pemusnahan, daftar tindak lanjut, laporan, lembar label). Ia
+memasang penanda `sedang-cetak` di `<body>`, dan `print.css` memakai penanda
+itu untuk menyembunyikan `.main`.
+
+Ini memperbaiki cacat yang sudah lama ada: `@media print` hanya menyembunyikan
+kerangka (sidebar, topbar, tombol), sementara kartu-kartu halamannya tetap
+ikut tercetak — jadi dokumen yang mau ditandatangani baru muncul di halaman
+kedua, di bawah tangkapan dashboard. Tidak kelihatan sama sekali di layar,
+hanya di kertas, dan karena itu bertahan sejak berita acara pemusnahan dibuat.
 
 ## Mode input
 
@@ -573,7 +624,8 @@ ditulis di sini ikut terbaca semua orang.
   meniru kartu manual yang ditempel di lemari pendingin — blok identitas
   berkotak, tabel mutasi berkolom Paraf, baris kosong diganjal sampai 14 supaya
   masih bisa ditulis tangan, dan semuanya **muat satu lembar A4** (terukur
-  ±161 mm dari 269 mm ruang cetak). Kalau ukuran huruf atau tinggi barisnya
+  ±161 mm dari 277 mm ruang cetak — dulu 269 mm, lihat bagian Label soal
+  margin halaman). Kalau ukuran huruf atau tinggi barisnya
   diubah, hitung ulang batas itu.
 
 - Halaman Audit memperlakukan sheet sebagai sumber yang **bisa salah**, dan
