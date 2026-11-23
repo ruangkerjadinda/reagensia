@@ -1261,7 +1261,10 @@ function bacaRumus(body) {
 /** Nomor baris milik baris itu sendiri jadi `{b}`; angka lain dibiarkan. */
 function polakan_(rumus, baris) {
   if (!rumus) return '(bukan rumus)';
-  var re = new RegExp('([^0-9]|^)' + baris + '([^0-9]|$)', 'g');
+  // [^0-9$] bukan [^0-9]: acuan mutlak ($E$5) selalu berawalan $, acuan yang
+  // barisnya relatif ($D372) tidak pernah. Tanpa itu, baris yang nomornya
+  // kebetulan sama dengan ujung rentang tampil sebagai pola palsu.
+  var re = new RegExp('([^0-9$]|^)' + baris + '([^0-9]|$)', 'g');
   var out = String(rumus);
   // Diulang karena dua kecocokan bersebelahan bisa berbagi satu karakter.
   for (var i = 0; i < 3; i++) out = out.replace(re, '$1{b}$2');

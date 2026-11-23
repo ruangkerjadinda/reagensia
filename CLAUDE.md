@@ -167,6 +167,17 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
     Obatnya `(LEFT(Penerimaan!$M$5:$M$1098;9)="Pembelian")`, tapi itu sheet
     Dinda — ditawarkan, bukan dikerjakan sendiri.
 
+    Contohnya sudah ada di sheet itu sendiri: kolom Titipan Daerah (L)
+    memakai `ISNUMBER(SEARCH("Titipan"; …))`, bukan kesamaan persis, jadi ia
+    kebal terhadap pergantian tahun. Kolom Distribusi (M) dan Pemusnahan (N)
+    tidak menyaring kategori sama sekali.
+
+    Rentangnya sendiri lapang, jadi bukan itu yang perlu dikhawatirkan
+    (24 Nov 2026): Penerimaan terpakai sampai baris 386 dari 1098, Distribusi
+    117 dari 1002, Pemusnahan 94 dari 994. Seluruh tujuh kolom berumus
+    (I sampai O) kini seragam — satu pola per kolom di ketiga ratus delapan
+    puluh satu barisnya, diperiksa lewat `maintenance.rumus`.
+
 12. **Tiap tab punya daftar validasi Kategori sendiri, dan isinya berbeda.**
     Penerimaan kolom M: `Stok Awal / Pembelian 2026 / Hibah / Titipan Daerah`.
     Distribusi kolom I: `Hibah / Titipan Daerah / **Pembelian**` — tanpa tahun,
