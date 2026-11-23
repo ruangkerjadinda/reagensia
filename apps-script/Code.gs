@@ -29,7 +29,7 @@
  * Pemasangan: lihat DEPLOY.md.
  */
 
-var VERSION = '1.0.0';
+var VERSION = '1.1.0';
 
 var TABS = {
   master: 'Master Stok',
@@ -99,6 +99,15 @@ function doPost(e) {
       return json({ ok: true, action: body.action, result: inspect(body) });
     }
 
+    // Membaca rumus apa adanya. gviz tidak pernah mengirim rumus, hanya hasil
+    // hitungannya, jadi ini satu-satunya cara melihat rumus dari luar — dan
+    // satu-satunya cara menemukan baris yang rumusnya menyimpang diam-diam.
+    if (body.action === 'maintenance.rumus') {
+      requireToken(body.token);
+      return json({ ok: true, action: body.action, result: bacaRumus(body) });
+    }
+
+
     requireToken(body.token);
 
     if (!body.requestId) {
@@ -125,6 +134,7 @@ function doPost(e) {
         case 'distribusi.create': result = createOutbound(body, 'distribusi'); break;
         case 'pemusnahan.create': result = createOutbound(body, 'pemusnahan'); break;
         case 'maintenance.repairSisa': result = repairSisa(body); break;
+        case 'maintenance.salinRumus': result = salinRumus(body); break;
         default:
           return json({ ok: false, code: 'BAD_REQUEST', error: 'Aksi tidak dikenal: ' + body.action });
       }
@@ -1180,6 +1190,175 @@ function inspect(body) {
 /* ------------------------------------------------------------------ log */
 
 /** Catatan penulisan. Tab Log dibuat sendiri kalau belum ada. */
+/**
+ * Rumus satu rentang, apa adanya, plus ringkasan polanya.
+ *
+ * Yang penting ringkasan polanya, bukan daftar selnya: nomor baris milik
+ * baris itu sendiri diganti `{b}`, sehingga seluruh kolom yang rumusnya
+ * seragam runtuh jadi satu pola. Baris yang menyimpang langsung tampak
+ * sebagai pola kedua dengan jumlah kecil — persis kegagalan yang tidak
+ * kelihatan dari nilainya, karena rumus yang salah tetap menghasilkan angka
+ * yang masuk akal (nol).
+ *
+ * Nomor baris di dalam acuan rentang (`$E$5:$E$1098`) sengaja TIDAK diganti:
+ * rentang yang kependekan adalah salah satu cara rumus menyimpang, jadi
+ * menyamakannya justru menyembunyikan temuan.
+ */
+function bacaRumus(body) {
+  requireFields(body, ['sheet', 'a1']);
+  var sheet = sheetByName(body.sheet);
+  var range = sheet.getRange(String(body.a1));
+  var sel = range.getNumRows() * range.getNumColumns();
+  if (sel > 20000) throw fail('BAD_REQUEST', 'Rentang terlalu besar (' + sel + ' sel, maks 20000): ' + body.a1);
+
+  var rumus = range.getFormulas();
+  var tampil = range.getDisplayValues();
+  var baris0 = range.getRow();
+  var kolom0 = range.getColumn();
+
+  var polaKolom = [];
+  for (var c = 0; c < rumus[0].length; c++) {
+    var peta = {};
+    for (var r = 0; r < rumus.length; r++) {
+      var pola = polakan_(rumus[r][c], baris0 + r);
+      if (!peta[pola]) peta[pola] = { pola: pola, jumlah: 0, baris: [] };
+      peta[pola].jumlah++;
+      peta[pola].baris.push(baris0 + r);
+    }
+    var daftar = [];
+    for (var k in peta) {
+      if (!peta.hasOwnProperty(k)) continue;
+      daftar.push({ pola: peta[k].pola, jumlah: peta[k].jumlah, baris: ringkasBaris_(peta[k].baris) });
+    }
+    daftar.sort(function (a, b) { return b.jumlah - a.jumlah; });
+    polaKolom.push({ kolom: colLetter(kolom0 + c), pola: daftar });
+  }
+
+  var hasil = {
+    sheet: sheet.getName(),
+    a1: range.getA1Notation(),
+    baris: { dari: baris0, sampai: baris0 + rumus.length - 1 },
+    jumlahSel: sel,
+    polaPerKolom: polaKolom,
+  };
+
+  // Daftar sel mentah hanya untuk rentang kecil — jawabannya harus tetap muat.
+  if (sel <= 300) {
+    hasil.sel = [];
+    for (var rr = 0; rr < rumus.length; rr++) {
+      for (var cc = 0; cc < rumus[rr].length; cc++) {
+        hasil.sel.push({
+          a1: colLetter(kolom0 + cc) + (baris0 + rr),
+          rumus: rumus[rr][cc],
+          tampil: tampil[rr][cc],
+        });
+      }
+    }
+  }
+  return hasil;
+}
+
+/** Nomor baris milik baris itu sendiri jadi `{b}`; angka lain dibiarkan. */
+function polakan_(rumus, baris) {
+  if (!rumus) return '(bukan rumus)';
+  var re = new RegExp('([^0-9]|^)' + baris + '([^0-9]|$)', 'g');
+  var out = String(rumus);
+  // Diulang karena dua kecocokan bersebelahan bisa berbagi satu karakter.
+  for (var i = 0; i < 3; i++) out = out.replace(re, '$1{b}$2');
+  return out;
+}
+
+/** [372,373,374,380] menjadi "372-374, 380". */
+function ringkasBaris_(daftar) {
+  var out = [];
+  var mulai = daftar[0];
+  var akhir = daftar[0];
+  for (var i = 1; i < daftar.length; i++) {
+    if (daftar[i] === akhir + 1) { akhir = daftar[i]; continue; }
+    out.push(mulai === akhir ? String(mulai) : mulai + '-' + akhir);
+    mulai = akhir = daftar[i];
+  }
+  out.push(mulai === akhir ? String(mulai) : mulai + '-' + akhir);
+  return out.join(', ');
+}
+
+/**
+ * Menyalin rumus satu baris ke bawah — yang biasa dilakukan dengan
+ * salin-tempel, tapi bisa diperiksa dulu sebelum jadi.
+ *
+ * Dua pengaman yang disengaja:
+ *
+ * - **Kolom yang di sumbernya bukan rumus dilewati.** Menyalin nilai mati ke
+ *   bawah adalah cara paling gampang mematikan kolom berumus, dan itu persis
+ *   kegagalan yang sudah pernah terjadi di workbook ini (lihat `writeRow`).
+ * - **Menulis hanya kalau `terapkan: true`.** Tanpa itu ia mengembalikan
+ *   rencananya saja. Yang diubah adalah inventaris yang dipakai orang lain;
+ *   melihat dulu baru menulis bukan kemewahan.
+ */
+function salinRumus(body) {
+  requireFields(body, ['sheet', 'sumber', 'tujuan']);
+  var sheet = sheetByName(body.sheet);
+  var src = sheet.getRange(String(body.sumber));
+  var dst = sheet.getRange(String(body.tujuan));
+
+  if (src.getNumRows() !== 1) throw fail('BAD_REQUEST', 'Sumber harus satu baris: ' + body.sumber);
+  if (src.getNumColumns() !== dst.getNumColumns()) {
+    throw fail('BAD_REQUEST', 'Lebar sumber (' + src.getNumColumns() + ') dan tujuan (' + dst.getNumColumns() + ') harus sama.');
+  }
+  if (dst.getRow() <= src.getRow() && dst.getLastRow() >= src.getRow()) {
+    throw fail('BAD_REQUEST', 'Tujuan mencakup baris sumbernya sendiri.');
+  }
+
+  var rumusSumber = src.getFormulas()[0];
+  var kolom0 = src.getColumn();
+  var rencana = [];
+  for (var c = 0; c < rumusSumber.length; c++) {
+    var huruf = colLetter(kolom0 + c);
+    if (!rumusSumber[c]) {
+      rencana.push({ kolom: huruf, lewati: true, alasan: 'sumbernya bukan rumus' });
+      continue;
+    }
+    rencana.push({ kolom: huruf, lewati: false, rumusSumber: rumusSumber[c] });
+  }
+
+  var sebelumRumus = dst.getFormulas();
+  var sebelumTampil = dst.getDisplayValues();
+
+  if (!body.terapkan) {
+    return {
+      terapkan: false,
+      sheet: sheet.getName(),
+      sumber: src.getA1Notation(),
+      tujuan: dst.getA1Notation(),
+      rencana: rencana,
+      sebelum: { rumus: sebelumRumus, tampil: sebelumTampil },
+      catatan: 'Belum ditulis apa pun. Kirim ulang dengan terapkan: true.',
+    };
+  }
+
+  var ditulis = [];
+  for (var i = 0; i < rencana.length; i++) {
+    if (rencana[i].lewati) continue;
+    var kol = kolom0 + i;
+    var dariSel = sheet.getRange(src.getRow(), kol, 1, 1);
+    var keSel = sheet.getRange(dst.getRow(), kol, dst.getNumRows(), 1);
+    dariSel.copyTo(keSel, SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false);
+    ditulis.push(rencana[i].kolom);
+  }
+  SpreadsheetApp.flush();
+
+  return {
+    terapkan: true,
+    sheet: sheet.getName(),
+    sumber: src.getA1Notation(),
+    tujuan: dst.getA1Notation(),
+    kolomDitulis: ditulis,
+    kolomDilewati: rencana.filter(function (r) { return r.lewati; }).map(function (r) { return r.kolom; }),
+    sebelum: { rumus: sebelumRumus, tampil: sebelumTampil },
+    sesudah: { rumus: dst.getFormulas(), tampil: dst.getDisplayValues() },
+  };
+}
+
 function writeLog(body, result, status) {
   var ss = book();
   var sheet = ss.getSheetByName(TABS.log);

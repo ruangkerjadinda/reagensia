@@ -147,6 +147,26 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
     **Nama + Lot** — kunci sejati workbook ini, satu-satunya yang menemukan lot
     yang kodenya belum ada di Daftar Kode.
 
+11a. **Rumus Master Stok tidak seragam — sebagiannya bisa basi diam-diam.**
+    Kolom masuk/keluar mencocokkan kategori sebagai **teks harfiah**, dan
+    teksnya ikut tertulis di tiap baris. Pada 24 Nov 2026 baris 372–385
+    ternyata menguji `="Pembelian"` sementara 367 baris di atasnya menguji
+    `="Pembelian 2026"`. Daftar validasi tab Penerimaan tidak punya
+    "Pembelian" telanjang, jadi SUMPRODUCT-nya nol di keempat belas baris itu
+    dan **547 unit hilang tanpa satu pun sel merah**.
+
+    Yang membuatnya mahal: nama, lot, kategori dan rentang semuanya benar, dan
+    gviz hanya mengirim hasil hitungan — rumusnya sendiri tidak pernah ikut.
+    Empat dugaan dikejar sebelum sebabnya ketemu. Karena itu sekarang ada
+    `maintenance.rumus` (lihat Mode input): ia mengembalikan rumus apa adanya
+    plus ringkasan pola per kolom, sehingga baris yang menyimpang tampak
+    sebagai pola kedua berjumlah kecil.
+
+    **Tahun 2026 itu harfiah di ~381 baris.** Begitu daftar kategori berganti
+    ke "Pembelian 2027", seluruh kolom Pembelian nol dengan cara yang sama.
+    Obatnya `(LEFT(Penerimaan!$M$5:$M$1098;9)="Pembelian")`, tapi itu sheet
+    Dinda — ditawarkan, bukan dikerjakan sendiri.
+
 12. **Tiap tab punya daftar validasi Kategori sendiri, dan isinya berbeda.**
     Penerimaan kolom M: `Stok Awal / Pembelian 2026 / Hibah / Titipan Daerah`.
     Distribusi kolom I: `Hibah / Titipan Daerah / **Pembelian**` — tanpa tahun,
@@ -171,9 +191,9 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
 
     Yang masih tertinggal: `metode` dan `lokasi` di form pemusnahan dihapus
     karena tab Pemusnahan tidak punya kolomnya (`setIfCol` akan mengisinya
-    sendiri kalau kolomnya ditambahkan), dan **mode input belum pernah dipasang
-    di workbook asli** — langkahnya ada di `apps-script/DEPLOY.md`, dan yang
-    memasang adalah pemilik spreadsheet.
+    sendiri kalau kolomnya ditambahkan). **Mode input kini sudah terpasang di
+    workbook asli** — lihat bagian Mode input di bawah; yang belum pernah
+    terjadi hanyalah penulisan transaksi sungguhan lewat dashboard.
 
 ## Kalau kolom di spreadsheet dipindah / dihapus / diganti nama
 
@@ -307,14 +327,27 @@ berganti tema/palet tanpa disentuh.
 ## Mode input
 
 Membaca lewat gviz; menulis lewat Web App Apps Script yang **sudah terpasang
-dan lulus uji di salinan, tapi belum di workbook asli**. Selama endpoint
-kosong, dashboard berjalan penuh dalam mode baca dan halaman Transaksi
-menampilkan kartu penyiapan.
+dan hidup di workbook asli**. Selama endpoint kosong di `config.js`,
+dashboard berjalan penuh dalam mode baca dan halaman Transaksi menampilkan
+kartu penyiapan.
+
+Produksi: proyek Apps Script mandiri **`Reagensia writer`**
+(`1qJTOyB9khaUdmWApuOwLyjGlyffVyrA2MJPmmDvwgMEf1wLJo3TdvCvN`), penerapan
+`AKfycbzpO3SVCuQ0vS5HOGwt_qqigIScSUjEt65ctL7XBGr70qtI-elCiPAmqCd2IkgBBZqF`.
+GET telanjang ke `/exec` tidak butuh token dan menyebutkan versi serta
+workbook yang dilayaninya — cara tercepat memastikan penerapan mana yang
+sedang hidup.
 
 Salinan uji: `SALINAN UJI — Reagensia`
 (`1gaLJHMk6flH07mHl1zW6d-hdq44t9a_vyBfVh9oO_ec`), proyek Apps Script
 `1AWKm8_5jDecTOQP0W1yYyhLvACIV7ZnrPjaEIvYsLxZAZU_f4Bh6rDF6`, didorong lewat
 `clasp` dari folder `apps-script/` (`.clasp.json` sengaja tidak masuk repo).
+
+**Periksa `.clasp.json` sebelum `clasp push`.** Karena ia tidak ikut repo, ia
+gampang tertinggal menunjuk salinan uji sementara yang hidup adalah proyek
+produksi — persis yang terjadi sampai 24 Nov 2026. `clasp list` menampilkan
+proyek milik akun yang sedang login, dan `clasp list-deployments` menampilkan
+penerapannya; keduanya lebih bisa dipercaya daripada berkas itu.
 
 `apps-script/DEPLOY.md` memuat langkah pemasangan serta daftar uji terima. Yang
 memasang di workbook asli adalah pemilik spreadsheet, bukan kita.
@@ -343,6 +376,18 @@ tanpa satu pun galat. Jadi `ping` mengembalikan `spreadsheetId` dan
 `CONFIG.spreadsheetId`: kalau berbeda ia memasang peringatan merah yang
 menetap **dan mengunci sakelar mode input** sampai keduanya sama. Jangan
 diturunkan jadi toast biasa.
+
+Dua aksi perawatan ditambahkan 24 Nov 2026 (v1.1.0), keduanya butuh `API_TOKEN`:
+
+- **`maintenance.rumus`** `{sheet, a1}` — baca saja, tanpa kunci dan tanpa
+  `requestId`. Mengembalikan rumus tiap sel plus ringkasan pola per kolom:
+  nomor baris milik baris itu sendiri diganti `{b}`, jadi kolom yang seragam
+  runtuh jadi satu pola. Nomor di dalam acuan rentang (`$E$5:$E$1098`) sengaja
+  dibiarkan — rentang kependekan juga sebentuk penyimpangan.
+- **`maintenance.salinRumus`** `{sheet, sumber, tujuan}` — menyalin rumus satu
+  baris ke bawah. Kolom yang di sumbernya bukan rumus **dilewati** (menyalin
+  nilai mati ke bawah adalah cara paling gampang mematikan kolom berumus), dan
+  tanpa `terapkan: true` ia hanya mengembalikan rencananya.
 
 `Formulas.gs` ada di `.claspignore` dan **tidak ikut terpasang**: ia memasang
 SUMIFS di Master Stok dan menolkan Stok Awal dengan premis yang sudah
