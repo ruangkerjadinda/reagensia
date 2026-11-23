@@ -80,9 +80,13 @@ export function render({ data }) {
 /** Entri buku besar satu lot, urut waktu, dengan saldo berjalan. */
 export function ledger(lot) {
   const entries = [
-    ...lot.receipts.map((r) => ({ date: r.tanggal, jenis: 'Penerimaan', masuk: r.qty, keluar: 0, ket: r.ket || '', pic: r.pic || '', row: r })),
-    ...lot.issues.map((r) => ({ date: r.tanggal, jenis: 'Distribusi', masuk: 0, keluar: r.qty, ket: [r.instalasi, r.picPenerima].filter(Boolean).join(' · '), pic: r.picPengirim || '', row: r })),
-    ...lot.disposals.map((r) => ({ date: r.tanggal, jenis: 'Pemusnahan', masuk: 0, keluar: r.qty, ket: r.alasan || '', pic: r.pic || '', row: r })),
+    // `pengguna` dipisah dari `ket` dengan sengaja: nama penerima adalah teks
+    // terpanjang di baris distribusi, dan selama ia ikut di Keterangan, kolom
+    // itu membungkus jadi dua baris di kartu cetak sementara kolom lain
+    // kosong melompong. Dipisah, keduanya muat satu baris.
+    ...lot.receipts.map((r) => ({ date: r.tanggal, jenis: 'Penerimaan', masuk: r.qty, keluar: 0, ket: r.ket || '', pengguna: '', pic: r.pic || '', row: r })),
+    ...lot.issues.map((r) => ({ date: r.tanggal, jenis: 'Distribusi', masuk: 0, keluar: r.qty, ket: r.instalasi || '', pengguna: r.picPenerima || '', pic: r.picPengirim || '', row: r })),
+    ...lot.disposals.map((r) => ({ date: r.tanggal, jenis: 'Pemusnahan', masuk: 0, keluar: r.qty, ket: r.alasan || '', pengguna: '', pic: r.pic || '', row: r })),
   ].sort((a, b) => {
     if (!a.date && !b.date) return 0;
     if (!a.date) return 1;
@@ -129,13 +133,14 @@ function printCard(lot, entries, akhir) {
   const body = entries.map((e) => el('tr', {},
     el('td', { text: e.date ? fmtDate(e.date) : '' }),
     el('td.wrap', { text: [e.jenis, e.ket].filter(Boolean).join(' — ') }),
+    el('td.wrap', { text: e.pengguna || '' }),
     el('td.num', { text: e.masuk ? fmtNum(e.masuk) : '' }),
     el('td.num', { text: e.keluar ? fmtNum(e.keluar) : '' }),
     el('td.num', { text: fmtNum(e.saldo) }),
     el('td', { text: e.pic || '' })));
 
   for (let i = entries.length; i < MIN_BARIS; i += 1) {
-    body.push(el('tr.kosong', {}, ...Array.from({ length: 6 }, () => el('td', { text: ' ' }))));
+    body.push(el('tr.kosong', {}, ...Array.from({ length: 7 }, () => el('td', { text: ' ' }))));
   }
 
   return el('section.print-only.kartu-cetak', {},
@@ -149,6 +154,7 @@ function printCard(lot, entries, akhir) {
       el('thead', {}, el('tr', {},
         el('th', { text: 'Tanggal' }),
         el('th', { text: 'Keterangan' }),
+        el('th', { text: 'Pengguna' }),
         el('th.num', { text: 'Masuk' }),
         el('th.num', { text: 'Keluar' }),
         el('th.num', { text: 'Sisa Stok' }),
@@ -229,6 +235,7 @@ function card(lot, data) {
             { key: 'keluar', label: 'Keluar', align: 'num', sortable: false, render: (e) => (e.keluar ? fmtNum(e.keluar) : '—') },
             { key: 'saldo', label: 'Saldo', align: 'num', sortable: false, className: 'strong', render: (e) => fmtNum(e.saldo) },
             { key: 'ket', label: 'Keterangan', className: 'wrap', sortable: false },
+            { key: 'pengguna', label: 'Pengguna', className: 'wrap', sortable: false },
             { key: 'pic', label: 'PIC', sortable: false },
             { key: 'row', label: 'Baris', align: 'num', sortable: false, get: (e) => e.row._row },
           ],

@@ -86,12 +86,21 @@
     background: #ececec !important; font-weight: 600; border-bottom: 1pt solid #000;
   }
   .kartu-cetak-mutasi .num { text-align: right; }
-  .kartu-cetak-mutasi th:nth-child(1), .kartu-cetak-mutasi td:nth-child(1) { width: 14%; white-space: nowrap; }
-  .kartu-cetak-mutasi th:nth-child(2), .kartu-cetak-mutasi td:nth-child(2) { width: 36%; }
-  .kartu-cetak-mutasi th:nth-child(3), .kartu-cetak-mutasi td:nth-child(3),
+  /* Tujuh kolom: Tanggal | Keterangan | Pengguna | Masuk | Keluar | Sisa | Paraf.
+     Nama penerima punya kolom sendiri sejak Nov 2026 — sebelumnya ia ikut di
+     Keterangan dan membuat kolom itu membungkus jadi dua baris sementara kolom
+     lain kosong. Lebarnya dipilih supaya keduanya muat satu baris pada 8,5pt:
+     Keterangan menampung "Distribusi — Mikrobiologi", Pengguna menampung nama
+     terpanjang yang ada di sheet. Kalau salah satunya dipersempit lagi,
+     barisnya membungkus, tingginya berubah, dan batas satu lembar A4 perlu
+     dihitung ulang. */
+  .kartu-cetak-mutasi th:nth-child(1), .kartu-cetak-mutasi td:nth-child(1) { width: 13%; white-space: nowrap; }
+  .kartu-cetak-mutasi th:nth-child(2), .kartu-cetak-mutasi td:nth-child(2) { width: 26%; }
+  .kartu-cetak-mutasi th:nth-child(3), .kartu-cetak-mutasi td:nth-child(3) { width: 19%; }
   .kartu-cetak-mutasi th:nth-child(4), .kartu-cetak-mutasi td:nth-child(4),
-  .kartu-cetak-mutasi th:nth-child(5), .kartu-cetak-mutasi td:nth-child(5) { width: 11%; }
-  .kartu-cetak-mutasi th:nth-child(6), .kartu-cetak-mutasi td:nth-child(6) { width: 17%; }
+  .kartu-cetak-mutasi th:nth-child(5), .kartu-cetak-mutasi td:nth-child(5) { width: 8%; }
+  .kartu-cetak-mutasi th:nth-child(6), .kartu-cetak-mutasi td:nth-child(6) { width: 11%; }
+  .kartu-cetak-mutasi th:nth-child(7), .kartu-cetak-mutasi td:nth-child(7) { width: 15%; }
   .kartu-cetak-mutasi tr.kosong td { height: 13pt; }
 
   .kartu-cetak-kaki {
