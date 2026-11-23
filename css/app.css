@@ -332,6 +332,16 @@ a.btn { text-decoration: none; }
 .seg button:hover { color: var(--ink); background: var(--surface-hover); }
 .seg button[aria-pressed='true'] { background: var(--accent-wash); color: var(--accent-strong); font-weight: 600; }
 
+/* Pemilih jenis laporan: empat tombol yang harus tetap terbaca di layar
+   sempit, jadi boleh turun baris — berbeda dari .seg biasa yang selalu satu
+   baris karena isinya dua atau tiga pilihan pendek. */
+.seg--wrap { flex-wrap: wrap; max-width: 100%; }
+.seg--wrap button { flex: 1 1 auto; min-width: 120px; }
+
+/* Label kecil di kiri kolom isian, dipakai pemilih tanggal di Laporan. */
+.field-inline { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12.5px; color: var(--ink-muted); }
+.field-inline .input { width: auto; }
+
 .switch { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: 13px; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch-track {
@@ -396,6 +406,11 @@ table.data tbody tr { transition: background 90ms ease; }
 table.data tbody tr:hover { background: var(--surface-hover); }
 table.data tbody tr:last-child td { border-bottom: 0; }
 table.data tbody tr[data-clickable='true'] { cursor: pointer; }
+/* Judul kolom ikut rata kanan bersama angkanya. `dataTable` memang sudah
+   menandai th-nya `num` sejak awal, tapi tidak pernah ada aturan yang
+   memakainya — jadi di seluruh aplikasi judul kolom angka rata kiri sementara
+   isinya rata kanan, dan kolom sempit terbaca seperti dua kolom berbeda. */
+table.data th.num { text-align: right; }
 table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.data td.wrap { white-space: normal; min-width: 210px; }
 table.data td.strong { font-weight: 600; }

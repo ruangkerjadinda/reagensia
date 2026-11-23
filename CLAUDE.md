@@ -269,7 +269,7 @@ js/data/store.js      cache localStorage, stale-while-revalidate, status luring
 js/data/writer.js     klien mode input
 js/ui/                router, tabel, form, laci, dialog, palet, ikon
 js/charts/            SVG buatan sendiri (timeline, meter) — tanpa CDN
-js/pages/             sepuluh halaman
+js/pages/             sebelas halaman
 apps-script/          backend opsional + panduan pasang
 tools/                verify-data, build-snapshot, mock-endpoint, dev-server
 ```
@@ -334,6 +334,39 @@ halaman lain. Elemen pembungkusnya (`.mascot-row`) membawa kelas `.no-print`
 supaya juga tidak ikut tercetak. Warnanya semua token (`--surface`, `--ink`,
 `--accent`, `--accent-strong`, `--border-strong`, `--highlight`), jadi ikut
 berganti tema/palet tanpa disentuh.
+
+## Laporan
+
+Empat laporan yang diminta Dinda ada di satu halaman (`js/pages/laporan.js`),
+dipilih lewat parameter `jenis`: `stok`, `penerimaan`, `distribusi`,
+`kedaluwarsa`. Satu berkas karena keempatnya berbagi kerangka yang sama —
+pilih periode, ringkas per instalasi, rinci per baris, cetak bertanda tangan;
+yang berbeda hanya sumber barisnya.
+
+Pembedaan yang penting: **dua laporan periodik, dua laporan potret.**
+Penerimaan dan distribusi barisnya kejadian, jadi punya rentang tanggal dan
+kepala laporannya berbunyi "Periode …". Stok per instalasi dan kedaluwarsa
+barisnya keadaan hari ini — memberi mereka rentang tanggal justru
+menyesatkan, karena angkanya tidak akan berubah karenanya. Karena itu
+pemilih periodenya tidak muncul di sana dan kepalanya berbunyi "Per …".
+Berpindah ke laporan potret juga **membuang** parameter periodenya, supaya
+tidak ada judul periode yang menempel di angka yang tidak mengikutinya.
+
+Bakunya **bulan berjalan**, karena ini dipakai sebagai laporan bulanan. Kalau
+bulan itu kosong, keadaan kosongnya menyebutkan sendiri bahwa periodenya yang
+kosong dan menawarkan tombol "Lihat semua periode" — bukan tabel kosong tanpa
+penjelasan.
+
+Baris transaksi **tanpa tanggal** tidak bisa masuk periode mana pun. Daripada
+hilang diam-diam dari laporan yang dipakai untuk menandatangani sesuatu,
+jumlahnya dihitung dan ditampilkan sebagai peringatan di atas tabelnya.
+
+Yang dicetak disusun ulang dari data, bukan versi layar yang disembunyikan
+sebagian: dokumen yang ditandatangani tidak boleh membawa tombol, chip warna,
+atau kolom "Baris" yang hanya berguna di layar. Angkanya diverifikasi langsung
+ke sheet saat dibuat (24 Nov 2026): penerimaan November 106 baris / 2.712 unit
+/ 101 jenis / 6 instalasi, distribusi seluruh periode 113 baris / 135 unit,
+kedaluwarsa 98 lot — ketiganya cocok persis dengan hitungan langsung dari gviz.
 
 ## Mode input
 

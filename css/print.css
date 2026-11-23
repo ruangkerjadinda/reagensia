@@ -44,6 +44,17 @@
 
   .chip { border: 0.5pt solid #999; background: none !important; color: #000 !important; }
 
+  /* Laporan: judul bagian dan baris total.
+   *
+   * Baris total ditebalkan dan digaris atas karena itu yang dibaca pertama
+   * saat laporan ditandatangani; tanpa penegasan ia tenggelam di antara
+   * puluhan baris rincian yang bentuknya sama. */
+  .print-sub { font-size: 11pt; margin: 12pt 0 4pt; }
+  table.data tfoot tr.total td {
+    font-weight: 700; border-top: 1pt solid #000; border-bottom: 0;
+    background: #f3f3f3 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+
   /* Tanda tangan di kaki dokumen resmi. */
   .print-sign { margin-top: 24pt; display: flex; gap: 40pt; break-inside: avoid; }
   .print-sign div { flex: 1; font-size: 9pt; }

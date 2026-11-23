@@ -22,16 +22,17 @@ import * as stok from './pages/stok.js';
 import * as alert from './pages/alert.js';
 import * as audit from './pages/audit.js';
 import * as transaksi from './pages/transaksi.js';
+import * as laporan from './pages/laporan.js';
 import * as dokumen from './pages/dokumen.js';
 import * as kartustok from './pages/kartustok.js';
 import * as pengaturan from './pages/pengaturan.js';
 
-const PAGES = { dashboard, inventori, kadaluarsa, stok, alert, audit, transaksi, dokumen, kartustok, pengaturan };
+const PAGES = { dashboard, inventori, kadaluarsa, stok, alert, audit, transaksi, laporan, dokumen, kartustok, pengaturan };
 
 const NAV = [
   { label: 'Pantau', items: ['dashboard', 'inventori', 'kadaluarsa', 'stok'] },
   { label: 'Tindak lanjut', items: ['alert', 'audit'] },
-  { label: 'Catatan', items: ['transaksi', 'dokumen', 'kartustok'] },
+  { label: 'Catatan', items: ['transaksi', 'laporan', 'dokumen', 'kartustok'] },
   { label: 'Sistem', items: ['pengaturan'] },
 ];
 
