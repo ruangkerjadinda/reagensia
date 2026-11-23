@@ -419,6 +419,80 @@ ikut tercetak — jadi dokumen yang mau ditandatangani baru muncul di halaman
 kedua, di bawah tangkapan dashboard. Tidak kelihatan sama sekali di layar,
 hanya di kertas, dan karena itu bertahan sejak berita acara pemusnahan dibuat.
 
+## Notifikasi kedaluwarsa
+
+Dua bagian yang sengaja berbeda sifatnya:
+
+1. **Surel mingguan** (`apps-script/Notifikasi.gs`) — satu-satunya yang
+   sampai **tanpa ada yang membuka dashboard**. Pemicu waktu di proyek
+   Apps Script, baku Senin 07.00 Asia/Jakarta.
+2. **Kartu "sejak kunjungan terakhir"** di Dashboard (`js/data/notifikasi.js`)
+   — mencatat kunci lot yang sudah pernah dilihat di localStorage, lalu
+   menampilkan yang belum pernah ada di catatan itu.
+
+**Keduanya memakai aturan yang sama persis:** sudah lewat tanggal atau masuk
+ambang kritis (30 hari), **dan sisa stoknya masih ada**. Dua sumber kabar
+dengan aturan berbeda akan menghasilkan dua angka berbeda untuk hal yang
+sama, dan yang membacanya tidak punya cara tahu mana yang benar.
+
+**Angkanya jauh lebih kecil dari halaman Kedaluwarsa, dan itu disengaja.**
+Per 24 Nov 2026 halaman Kedaluwarsa menghitung 98 lot; notifikasi menghitung
+10. Bedanya lot yang sisanya sudah nol: tidak ada yang perlu ditarik dari
+rak, jadi mengabarkannya hanya memanjangkan daftar dengan baris yang tidak
+bisa ditindaklanjuti. Surelnya **menyebutkan sendiri** berapa yang dilewati
+karena alasan itu — selisih yang tidak dijelaskan selalu dikira kesalahan.
+
+**Mingguan, bukan harian.** 98 lot kedaluwarsa akan tetap 98 besok. Surel
+harian berisi daftar yang sama persis dibaca dua kali lalu difilter ke folder
+lain selamanya, dan notifikasi yang diabaikan lebih buruk daripada tidak ada
+notifikasi — ia memberi rasa aman tanpa memberi kabar. Karena itu tiap surel
+menandai di paling atas apa yang **baru** sejak kiriman terakhir, dibanding
+lewat sidik MD5 4 bita per lot di `NOTIF_SIDIK_TERAKHIR` (menyimpan kuncinya
+utuh bisa menembus batas 9 KB per properti). Sidiknya disimpan **sesudah**
+kirim berhasil, supaya kegagalan tidak menghapus status "baru" lot yang
+belum pernah dikabarkan.
+
+Kartu di Dashboard diam pada kunjungan pertama: tanpa pembanding, "semua lot
+ini baru" adalah kabar yang salah. Kalau tidak ada yang baru ia juga diam,
+tapi catatannya tetap diperbarui.
+
+**Penerimanya pemilik skrip sendiri** kalau `EMAIL_NOTIFIKASI` kosong, lewat
+`Session.getEffectiveUser()`. Jadi tidak ada alamat surel yang perlu ditulis
+di repositori ini, yang publik.
+
+### Scope baru butuh otorisasi ulang sekali
+
+Mengirim surel dan memasang pemicu menambah tiga scope ke manifes
+(`script.send_mail`, `script.scriptapp`, `userinfo.email`). Otorisasi
+penerapan yang lama jadi tidak cukup, dan **Google hanya menampilkan layar
+persetujuannya kalau ada orang yang menjalankan fungsi dari editor** — tidak
+bisa lewat web app, tidak bisa lewat `clasp`.
+
+Karena itu ada `otorisasi()` di `Notifikasi.gs`: ia menyentuh ketiga izin itu
+dengan panggilan yang tidak berakibat apa-apa (`getRemainingDailyQuota()`
+butuh izin kirim surel tapi tidak mengirim satu pun), jadi yang memberi izin
+tidak perlu mempertaruhkan satu surel pun. Jalankan sekali, lalu sisanya bisa
+lewat endpoint.
+
+Bagian spreadsheet tetap jalan selama izin baru belum diberikan — yang gagal
+hanya aksi notifikasinya, dengan pesan yang menyebut scope-nya.
+
+### Aksi endpoint
+
+- `notifikasi.pratinjau` — menyusun surelnya dan mengembalikannya **tanpa
+  mengirim**. Baca saja, tanpa kunci dan tanpa `requestId`.
+- `notifikasi.status` — pemicu yang terpasang, penerima, ambang, kiriman
+  terakhir.
+- `notifikasi.kirim` — benar-benar mengirim. `paksa: true` mengirim walau
+  tidak ada yang melewati ambang (tanpa itu ia diam, karena surel "semuanya
+  aman" tiap minggu adalah cara tercepat membuat orang berhenti membaca).
+- `notifikasi.pasangPemicu` `{hari, jam}` — hari SENIN..MINGGU. Pemicu lama
+  dihapus lebih dulu; memanggilnya dua kali tidak boleh jadi dua surel.
+- `notifikasi.hapusPemicu`, `notifikasi.properti` — yang terakhir hanya boleh
+  menyetel kunci di daftar `NOTIF_PROPERTI`, supaya jalur yang dibuat untuk
+  mengatur alamat surel tidak pernah bisa mengubah `SPREADSHEET_ID` atau
+  `API_TOKEN`.
+
 ## Mode input
 
 Membaca lewat gviz; menulis lewat Web App Apps Script yang **sudah terpasang

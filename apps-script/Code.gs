@@ -29,7 +29,7 @@
  * Pemasangan: lihat DEPLOY.md.
  */
 
-var VERSION = '1.1.0';
+var VERSION = '1.2.0';
 
 var TABS = {
   master: 'Master Stok',
@@ -107,6 +107,19 @@ function doPost(e) {
       return json({ ok: true, action: body.action, result: bacaRumus(body) });
     }
 
+    // Menyusun surelnya tanpa mengirim, dan melihat status pemicunya. Tidak
+    // ada yang keluar dari sini — notifikasi.kirim yang mengirim, dan ia
+    // lewat jalur berkunci di bawah.
+    if (body.action === 'notifikasi.pratinjau') {
+      requireToken(body.token);
+      return json({ ok: true, action: body.action, result: notifJalankan_({ kirim: false }) });
+    }
+
+    if (body.action === 'notifikasi.status') {
+      requireToken(body.token);
+      return json({ ok: true, action: body.action, result: notifStatusPemicu_() });
+    }
+
 
     requireToken(body.token);
 
@@ -135,6 +148,10 @@ function doPost(e) {
         case 'pemusnahan.create': result = createOutbound(body, 'pemusnahan'); break;
         case 'maintenance.repairSisa': result = repairSisa(body); break;
         case 'maintenance.salinRumus': result = salinRumus(body); break;
+        case 'notifikasi.kirim': result = notifJalankan_({ kirim: true, paksa: body.paksa === true }); break;
+        case 'notifikasi.pasangPemicu': result = notifPasangPemicu_(body); break;
+        case 'notifikasi.hapusPemicu': result = notifHapusPemicu_(); break;
+        case 'notifikasi.properti': result = notifAturProperti_(body); break;
         default:
           return json({ ok: false, code: 'BAD_REQUEST', error: 'Aksi tidak dikenal: ' + body.action });
       }

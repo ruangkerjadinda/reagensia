@@ -1,5 +1,6 @@
 import { el, kpi, sectionHead, cardHead, chip, barRow, fmtNum, fmtDate, notice, btn, empty } from '../ui/dom.js';
 import { go } from '../ui/router.js';
+import { perubahanSejakTerakhir, tandaiDilihat } from '../data/notifikasi.js';
 import { expiryTimeline } from '../charts/timeline.js';
 import { meter } from '../charts/meter.js';
 import { byInstalasi, expiryTimeline as buildTimeline, activityFeed } from '../data/analytics.js';
@@ -62,6 +63,11 @@ export function render({ data, summary }) {
   page.append(el('div.mascot-row.no-print', {},
     el('div.mascot-badge', { html: mascotSvg() }),
     el('div.mascot-greet', { text: `${greeting()}!` })));
+
+  /* --------------------------------------------------------- notifikasi */
+
+  const kabar = kartuNotifikasi(data);
+  if (kabar) page.append(kabar);
 
   /* --------------------------------------------------- baris peringatan */
 
@@ -207,4 +213,56 @@ export function render({ data, summary }) {
       : empty({ title: 'Belum ada aktivitas', body: 'Tab transaksi masih kosong atau tanggalnya belum diisi.' })));
 
   return page;
+}
+
+/**
+ * Apa yang berubah sejak kunjungan terakhir di peramban ini.
+ *
+ * Kunjungan pertama tidak memunculkan apa pun: tanpa pembanding, "semua 98
+ * lot ini baru" adalah kabar yang salah. Keadaannya dicatat diam-diam, dan
+ * kunjungan berikutnya baru punya dasar untuk membandingkan.
+ *
+ * Kalau tidak ada yang baru, catatannya tetap diperbarui supaya "sejak"
+ * ikut maju — tapi tidak ada kartu yang tampil. Kartu "tidak ada kabar"
+ * setiap kali membuka dashboard adalah cara tercepat membuat kartu
+ * berikutnya, yang benar-benar penting, ikut diabaikan.
+ */
+function kartuNotifikasi(data) {
+  const { pertamaKali, baru, sejak, kunciSekarang } = perubahanSejakTerakhir(data);
+
+  if (pertamaKali || !baru.length) {
+    tandaiDilihat(kunciSekarang);
+    return null;
+  }
+
+  const sudahLewat = baru.filter((l) => l.isExpired);
+  const nama = baru.slice(0, 3).map((l) => l.nama || l.kode || 'tanpa nama').join(', ');
+  const sisa = baru.length - 3;
+  const kritis = baru.length - sudahLewat.length;
+
+  const kartu = notice({
+    tone: sudahLewat.length ? 'danger' : 'warn',
+    icon: 'alert',
+    title: `${baru.length} reagen melewati ambang kedaluwarsa sejak Anda terakhir melihat`
+      + (sejak ? ` (${fmtDate(sejak)})` : ''),
+    body: `${sudahLewat.length} sudah lewat tanggal, ${kritis} masuk kategori kritis.`
+      + ` ${nama}${sisa > 0 ? `, dan ${sisa} lainnya` : ''}.`,
+    action: el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+      btn('Lihat daftarnya', {
+        variant: sudahLewat.length ? 'danger' : 'primary',
+        onclick: () => {
+          tandaiDilihat(kunciSekarang);
+          go('kedaluwarsa');
+        },
+      }),
+      btn('Tandai sudah dibaca', {
+        variant: 'ghost',
+        onclick: () => {
+          tandaiDilihat(kunciSekarang);
+          kartu.remove();
+        },
+      })),
+  });
+
+  return kartu;
 }
