@@ -483,6 +483,20 @@ kedaluwarsa" yang memang disengaja.
 Sesudah diperbaiki keduanya sepakat: 2 lot kedaluwarsa + 8 kritis = 10 lot
 yang dikabarkan, dan 136 lot tanpa tanggal di kedua sisi.
 
+### Keadaan sekarang
+
+**Pemicu mingguan sudah terpasang** (24 Nov 2026): Senin 07.00 Asia/Jakarta,
+memanggil `kirimNotifikasiKedaluwarsa`. Kiriman pertama Senin 30 Nov 2026.
+Penerimanya pemilik skrip, lewat `Session.getEffectiveUser()`; tidak ada
+alamat yang disetel di `EMAIL_NOTIFIKASI`.
+
+Surel pertama tidak akan punya bagian "baru sejak kiriman terakhir" — belum
+ada pembandingnya. Mulai yang kedua, bagian itulah yang berubah tiap minggu.
+
+Angka saat pemicu dipasang: 2 lot kedaluwarsa dan 8 lot kritis yang
+dikabarkan, 103 lot dilewati karena sisa stoknya nol, 136 lot tanpa tanggal,
+dan 2 tanggal tidak sah.
+
 ### Scope baru butuh otorisasi ulang sekali
 
 Mengirim surel dan memasang pemicu menambah tiga scope ke manifes
