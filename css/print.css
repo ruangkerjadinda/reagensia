@@ -103,6 +103,20 @@
   .kartu-cetak-mutasi th:nth-child(7), .kartu-cetak-mutasi td:nth-child(7) { width: 15%; }
   .kartu-cetak-mutasi tr.kosong td { height: 13pt; }
 
+  /* Pita simbol B3 di kartu cetak. Belah ketupatnya merah dan HARUS ikut
+     tercetak, jadi print-color-adjust dipaksa seperti header tabel. Namanya
+     tetap ditulis di sebelahnya supaya kartu yang difotokopi hitam-putih
+     masih memberi peringatan yang sama. */
+  .kartu-cetak-b3 {
+    display: flex; flex-wrap: wrap; gap: 4pt 12pt;
+    margin: 6pt 0 2pt; padding: 4pt 0; border-top: 0.5pt solid #bbb;
+  }
+  .kartu-cetak-b3 .b3-item { display: inline-flex; align-items: center; gap: 3pt; }
+  .kartu-cetak-b3 .b3-nama { font-size: 7pt; color: #222; }
+  .kartu-cetak-b3 .b3-ikon {
+    flex: none; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
   .kartu-cetak-kaki {
     display: flex; justify-content: space-between; gap: 10pt;
     margin-top: 6pt; font-size: 8pt; color: #333;

@@ -8,6 +8,7 @@
  */
 
 import { CONFIG } from '../config.js';
+import { bacaB3 } from './b3.js';
 
 export const BUCKET = {
   EXPIRED: 'EXPIRED',
@@ -129,6 +130,18 @@ export function normalize(tables, options = {}) {
   const thresholds = options.thresholds || CONFIG.thresholds;
 
   const masterRows = (tables.master || []).filter(hasIdentity);
+
+  // Simbol B3 per NAMA reagen, dari tab Daftar Kode. Bahayanya melekat pada
+  // zatnya, bukan pada lot-nya, jadi satu baris di sana melayani semua lot
+  // reagen itu. Kolomnya opsional: selama belum ada, petanya kosong dan tidak
+  // ada satu pun simbol yang tampil — bukan error, dan bukan simbol kosong
+  // yang menyiratkan "sudah diperiksa, tidak berbahaya".
+  const b3ByNama = new Map();
+  for (const r of tables.daftarKode || []) {
+    const n = norm(r.nama);
+    if (!n || b3ByNama.has(n)) continue;
+    if (r.simbolB3) b3ByNama.set(n, String(r.simbolB3).trim());
+  }
   const resolveKode = kodeResolver(masterRows);
 
   /** Lengkapi kode yang tidak ada di tabnya, lalu kunci barisnya ke lot. */
@@ -204,6 +217,7 @@ export function normalize(tables, options = {}) {
 
   const lots = masterRows.map((r) => {
     const key = lotKey(r.nama, r.lot);
+    const b3 = b3ByNama.get(norm(r.nama)) || '';
     const { bucket, days } = bucketFor(r.expDate, today, thresholds);
 
     const stokAwal = num(r.stokAwal);
@@ -243,6 +257,8 @@ export function normalize(tables, options = {}) {
       // Tidak ada lagi di Master Stok — diambil dari tab transaksi.
       kategori: docs.kategori || kategoriByKey.get(key) || '',
       kodeBmn: docs.kodeBmn,
+      b3,
+      b3Keys: bacaB3(b3).kunci,
       lokasiSimpan: docs.lokasiSimpan,
       suhuSimpan: docs.suhuSimpan || r.lokasi || '',
       status,

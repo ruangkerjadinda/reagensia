@@ -164,6 +164,30 @@ export const SCHEMA = {
       pic: { col: 'N', aliases: ['pic'] },
     },
   },
+  /**
+   * Tab referensi, bukan transaksi: satu baris per NAMA reagen, bukan per lot.
+   * Sudah ada sejak awal sebagai sumber kolom Kode di tab Penerimaan — kode
+   * reagen dicari ke sini lewat namanya.
+   *
+   * Judulnya ada di baris 1 dan gviz tidak mengenalinya sendiri, jadi
+   * `headers: 1` dikirim eksplisit seperti tab lain yang bermasalah.
+   *
+   * `simbolB3` ditandai optional: kolomnya belum tentu ada, dan kolom opsional
+   * yang hilang TIDAK boleh memunculkan peringatan pemetaan. Halaman Pengaturan
+   * memakai peringatan itu sebagai tanda "susunan sheet berubah"; satu
+   * peringatan palsu yang menetap membuat seluruh tanda itu berhenti dipercaya.
+   */
+  daftarKode: {
+    key: 'daftarKode',
+    tab: 'Daftar Kode',
+    label: 'Daftar Kode',
+    headers: 1,
+    fields: {
+      nama: { col: 'A', aliases: ['nama reagen'] },
+      kode: { col: 'B', aliases: ['kode'] },
+      simbolB3: { col: 'C', aliases: ['simbol b3', 'simbol bahaya', 'b3'], optional: true },
+    },
+  },
 };
 
 /**
@@ -176,6 +200,7 @@ export const FIRST_DATA_ROW = {
   distribusi: 5,
   pemusnahan: 5,
   kartuStok: 3,
+  daftarKode: 2,
 };
 
 const normalize = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -212,6 +237,12 @@ export function resolveColumns(tabKey, cols) {
       const hit = aliases.some((a) => labels[i] === a || labels[i].endsWith(` ${a}`));
       if (hit) { found = i; break; }
     }
+
+    // Kolom opsional dicocokkan HANYA lewat label. Jatuh ke posisi di sini
+    // berbahaya: kolom cadangannya mungkin kolom bantu yang kebetulan kosong,
+    // dan isinya akan terbaca sebagai data yang sama sekali bukan haknya.
+    // Tidak ketemu berarti memang belum ada — diam, tanpa peringatan.
+    if (found === -1 && def.optional) continue;
 
     if (found === -1) {
       const fallback = colToIndex(def.col);

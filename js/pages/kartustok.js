@@ -8,6 +8,7 @@
  */
 
 import { el, cardHead, chip, fmtNum, fmtDate, btn, empty, notice } from '../ui/dom.js';
+import { piktogramB3, bacaB3, NAMA_B3 } from '../ui/b3.js';
 import { dataTable } from '../ui/table.js';
 import { router, setParams } from '../ui/router.js';
 import { filterBar, applyFilters, bucketChip } from '../ui/shared.js';
@@ -114,6 +115,28 @@ export function ledger(lot) {
  */
 const MIN_BARIS = 14;
 
+/**
+ * Pita simbol B3. Dipakai di kartu layar maupun kartu cetak.
+ *
+ * Simbolnya tidak pernah berdiri sendiri: namanya ikut tertulis di sebelahnya.
+ * Kartu ini difotokopi hitam-putih dan dibaca orang yang mungkin buta warna —
+ * belah ketupat merah saja bukan peringatan yang bisa diandalkan.
+ *
+ * Kalau kolomnya belum diisi untuk reagen ini, pita ini tidak muncul sama
+ * sekali. Deretan kosong akan terbaca sebagai "sudah diperiksa, tidak
+ * berbahaya", dan itu keterangan yang tidak pernah kita punya.
+ */
+function pitaB3(lot, { cetak = false } = {}) {
+  const baca = bacaB3(lot.b3);
+  if (!baca.kunci.length) return null;
+  const ukuran = cetak ? 9 : 26;
+  const satuan = cetak ? 'mm' : 'px';
+  return el(cetak ? 'div.kartu-cetak-b3' : 'div.kartu-b3', {},
+    ...baca.kunci.map((k) => el('span.b3-item', {},
+      piktogramB3(k, { size: ukuran, satuan }),
+      el('span.b3-nama', { text: NAMA_B3[k] }))));
+}
+
 function printCard(lot, entries, akhir) {
   const idRows = [
     ['Nama Reagen', lot.nama],
@@ -149,6 +172,8 @@ function printCard(lot, entries, akhir) {
       el('span.kartu-cetak-cap', { text: `Dicetak ${fmtDate(new Date())}` })),
 
     el('table.kartu-cetak-id', {}, el('tbody', {}, ...pairRows(idRows))),
+
+    pitaB3(lot, { cetak: true }),
 
     el('table.kartu-cetak-mutasi', {},
       el('thead', {}, el('tr', {},
@@ -204,7 +229,8 @@ function card(lot, data) {
           ['Kategori', lot.kategori], ['Supplier', lot.supplier], ['Unit', lot.unit],
           ['Suhu simpan', lot.suhuSimpan], ['Lokasi simpan', lot.lokasiSimpan],
           ['Kedaluwarsa', lot.expDate ? fmtDate(lot.expDate) : '—'], ['PIC', lot.pic]]
-          .flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v || '—' })]))),
+          .flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v || '—' })])),
+      pitaB3(lot)),
 
     !cocok
       ? el('div.no-print', {}, notice({
