@@ -460,6 +460,28 @@ tapi catatannya tetap diperbarui.
 `Session.getEffectiveUser()`. Jadi tidak ada alamat surel yang perlu ditulis
 di repositori ini, yang publik.
 
+### Tanggal yang tidak pernah ada
+
+Dua sel Exp. Date di Master Stok berisi tanggal yang tidak ada di kalender:
+baris 208  (MIXING HPV PIDIE, 23 unit) dan baris 242
+ (MHA). Keduanya tulisan, bukan tanggal.
+
+**Dashboard tidak bisa melihatnya sama sekali.** Kolomnya bertipe tanggal,
+jadi gviz mengembalikan sel seperti itu sebagai kosong — tidak ada cara
+membedakannya dari sel yang memang belum diisi. Skrip Apps Script membacanya
+langsung, jadi ia bisa.
+
+Sempat ada akibatnya yang halus:  menggulung sendiri
+jadi 3 Maret, jadi surel melaporkan reagen itu kedaluwarsa karena tanggal yang
+tidak pernah ada — dan angkanya (3 lot) berbeda dari kartu di Dashboard (2 lot)
+untuk hal yang persis sama.  sekarang **ketat**: hanya
+nilai Date yang diterima, dan tulisan yang bukan tanggal dilaporkan sebagai
+temuan tersendiri di surel. , , dan  tidak ikut dilaporkan karena
+itu penanda "tidak punya masa kedaluwarsa" yang memang disengaja.
+
+Sesudah diperbaiki keduanya sepakat: 2 lot kedaluwarsa + 8 kritis = 10,
+dan 136 lot tanpa tanggal di kedua sisi.
+
 ### Scope baru butuh otorisasi ulang sekali
 
 Mengirim surel dan memasang pemicu menambah tiga scope ke manifes

@@ -110,6 +110,28 @@ function notifSidik_(kunci) {
   return out;
 }
 
+/**
+ * Tanggal kedaluwarsa, dibaca **ketat**.
+ *
+ * Kolomnya kolom tanggal, jadi tanggal yang sah selalu sampai ke sini
+ * sebagai Date. Yang sampai sebagai tulisan berarti bukan tanggal — dan
+ * `new Date('31 Feb 2026')` diam-diam menggulungnya jadi 3 Maret, lalu
+ * reagennya dilaporkan kedaluwarsa karena tanggal yang tidak pernah ada.
+ * Itu betul-betul terjadi di baris 208 (31 Feb 2026) dan 242 (31 Nov 2029).
+ *
+ * gviz mengembalikan sel seperti itu sebagai kosong, jadi dashboard tidak
+ * bisa membedakannya dari sel yang memang belum diisi. Skrip ini bisa —
+ * karena itu ia yang melaporkannya, bukan menebak isinya.
+ */
+function notifBacaTanggal_(nilai) {
+  if (nilai instanceof Date && !isNaN(nilai.getTime())) return { tanggal: nilai, salah: '' };
+  var teks = String(nilai == null ? '' : nilai).trim();
+  if (!teks) return { tanggal: null, salah: '' };
+  // Penanda 'tidak punya masa kedaluwarsa' yang memang disengaja.
+  if (/^(-|—|na|n\/a|tidak ada)$/i.test(teks)) return { tanggal: null, salah: '' };
+  return { tanggal: null, salah: teks };
+}
+
 /** Semua baris Master Stok sebagai objek, dibaca sekali jalan. */
 function notifBarisMaster_() {
   var ctx = masterContext();
@@ -125,6 +147,7 @@ function notifBarisMaster_() {
   for (var i = 0; i < nilai.length; i++) {
     var b = nilai[i];
     var nama = String(ambil(b, c.nama) || '').trim();
+    var tgl = notifBacaTanggal_(ambil(b, c.expDate));
     var lot = String(ambil(b, c.lot) || '').trim();
     if (!nama && !lot) continue;
     out.push({
@@ -133,7 +156,8 @@ function notifBarisMaster_() {
       lot: lot,
       kode: String(ambil(b, c.kode) || '').trim(),
       instalasi: String(ambil(b, c.instalasi) || '').trim() || '(tanpa instalasi)',
-      expDate: parseDate(ambil(b, c.expDate)),
+      expDate: tgl.tanggal,
+      expSalah: tgl.salah,
       sisaStok: Number(ambil(b, c.sisaStok)) || 0,
       unit: String(ambil(b, c.unit) || '').trim(),
       status: String(ambil(b, c.status) || '').trim(),
@@ -158,9 +182,15 @@ function notifRingkas_() {
   var kelompok = { kedaluwarsa: [], kritis: [], peringatan: [] };
   var kosong = 0;
   var tanpaTanggal = 0;
+  var tanggalSalah = [];
 
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
+    if (r.expSalah) {
+      tanggalSalah.push({ baris: r.baris, nama: r.nama, ditulis: r.expSalah, instalasi: r.instalasi });
+      tanpaTanggal++;
+      continue;
+    }
     if (!r.expDate) { tanpaTanggal++; continue; }
     r.hari = notifHariBeda_(hariIni, r.expDate);
     if (r.hari > ambang.peringatan) continue;
@@ -211,6 +241,7 @@ function notifRingkas_() {
     perInstalasi: daftarInstalasi,
     dilewatiKarenaKosong: kosong,
     tanpaTanggal: tanpaTanggal,
+    tanggalSalah: tanggalSalah,
     adaIsi: semua.length > 0,
   };
 }
@@ -318,6 +349,29 @@ function notifSurel_(ringkas) {
     }
   }
 
+  // Tanggal yang tidak pernah ada. Dilaporkan terpisah karena ini bukan
+  // 'belum diisi': ada yang mengetiknya, dan selama belum dibetulkan reagen
+  // itu tidak terpantau sama sekali — tidak di surel ini, tidak di dashboard.
+  if (ringkas.tanggalSalah.length) {
+    h.push('<h3 style="margin:18px 0 6px;color:#b3261e">Tanggal kedaluwarsa tidak sah ('
+      + ringkas.tanggalSalah.length + ')</h3>');
+    h.push('<p style="margin:0 0 8px;font-size:13px;color:#555">Tanggal ini tidak ada di kalender, '
+      + 'jadi reagennya tidak bisa dipantau sampai dibetulkan di Master Stok.</p>');
+    h.push('<table cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px">');
+    h.push('<thead><tr style="background:#f3f4f6;text-align:left">'
+      + '<th style="padding:6px 8px">Baris</th><th style="padding:6px 8px">Instalasi</th>'
+      + '<th style="padding:6px 8px">Reagen</th><th style="padding:6px 8px">Ditulis</th></tr></thead><tbody>');
+    for (var q = 0; q < ringkas.tanggalSalah.length; q++) {
+      var ts = ringkas.tanggalSalah[q];
+      h.push('<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">' + ts.baris + '</td>'
+        + '<td style="padding:6px 8px;border-bottom:1px solid #eee">' + notifEsc_(ts.instalasi) + '</td>'
+        + '<td style="padding:6px 8px;border-bottom:1px solid #eee">' + notifEsc_(ts.nama) + '</td>'
+        + '<td style="padding:6px 8px;border-bottom:1px solid #eee;color:#b3261e;font-weight:600">'
+        + notifEsc_(ts.ditulis) + '</td></tr>');
+    }
+    h.push('</tbody></table>');
+  }
+
   // Angka di surel ini sengaja berbeda dari halaman Kedaluwarsa, dan bedanya
   // disebutkan — selisih yang tidak dijelaskan selalu dikira kesalahan.
   h.push('<p style="color:#666;font-size:12px;margin-top:18px;border-top:1px solid #eee;padding-top:10px">');
@@ -358,6 +412,7 @@ function notifJalankan_(opsi) {
     pernahKirim: ringkas.pernahKirim,
     dilewatiKarenaKosong: ringkas.dilewatiKarenaKosong,
     tanpaTanggal: ringkas.tanpaTanggal,
+    tanggalSalah: ringkas.tanggalSalah,
     perInstalasi: ringkas.perInstalasi,
     terkirim: false,
   };
@@ -374,7 +429,7 @@ function notifJalankan_(opsi) {
 
   // Tidak ada yang perlu dikabarkan: diam. Surel "semuanya aman" tiap minggu
   // adalah cara tercepat membuat orang berhenti membaca surel berikutnya.
-  if (!ringkas.adaIsi && !opsi.paksa) {
+  if (!ringkas.adaIsi && !ringkas.tanggalSalah.length && !opsi.paksa) {
     hasil.catatan = 'Tidak ada lot yang melewati ambang; tidak ada surel yang dikirim.';
     return hasil;
   }
