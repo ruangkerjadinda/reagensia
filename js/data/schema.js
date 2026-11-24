@@ -87,7 +87,9 @@ export const SCHEMA = {
       // Nomor BMN (Barang Milik Negara). Sengaja tanpa `type`: kolomnya
       // sekarang bertipe angka di sheet, tapi nomor BMN boleh saja berisi
       // huruf nanti — tanpa type, tipenya mengikuti apa yang dikirim gviz.
-      kodeBmn: { col: 'X', aliases: ['kode bmn', 'bmn'] },
+      // type 'kode': nomornya disimpan sebagai angka di sheet, jadi nol di
+      // depannya hanya ada di tampilannya. Lihat coerce() di sheets.js.
+      kodeBmn: { col: 'X', aliases: ['kode bmn', 'bmn'], type: 'kode' },
     },
   },
 

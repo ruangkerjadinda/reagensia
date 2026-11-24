@@ -53,6 +53,20 @@ function coerce(cell, type) {
   }
   if (type === 'number') return typeof cell.v === 'number' ? cell.v : Number(cell.v);
   if (type === 'boolean') return Boolean(cell.v);
+
+  // Nomor yang dipakai sebagai identitas, bukan sebagai jumlah: KODE BMN
+  // `000001` adalah nomor enam digit, dan nol di depannya bagian dari
+  // nomornya — bukan hiasan yang boleh dibuang. Sel seperti itu disimpan
+  // sebagai angka di sheet, jadi gviz mengirim `v: 1` dengan tampilannya
+  // terpisah di `f: "000001"`. Memakai `v` membuat nomornya tercetak "1" di
+  // kartu stok, dan nomor BMN yang salah di dokumen fisik tidak bisa ditarik
+  // kembali. Jadi yang dipakai tampilannya.
+  //
+  // Hanya untuk kolom yang memang identitas dan tidak dipakai mencocokkan
+  // baris antar tab. Kalau kunci antar tab ikut memakai tampilan, ia bisa
+  // berbeda dari nilai yang dibandingkan rumus di sheet.
+  if (type === 'kode') return String(cell.f == null || cell.f === '' ? cell.v : cell.f);
+
   return String(cell.v);
 }
 

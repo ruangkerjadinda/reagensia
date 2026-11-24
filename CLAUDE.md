@@ -93,6 +93,22 @@ sebelumnya (baris total 197, 193 lot, kolom Kategori di Master Stok) sudah
    Nilainya **per lot**, bukan per reagen (tiga kode reagen punya lebih dari satu
    nomor BMN), jadi diturunkan lewat kunci `kode|lot` seperti COA/MSDS.
 
+   **Nomornya angka dengan nol di depan, dan nol itu bagian dari nomornya.**
+   `000001` disimpan di sheet sebagai angka 1 dengan format enam digit,
+   jadi gviz mengirim `v: 1` dan tampilannya terpisah di `f: "000001"`.
+   Memakai `v` membuat nomornya tampil "1" di kartu stok — dan nomor BMN yang
+   salah di kartu yang sudah dicetak tidak bisa ditarik kembali. Karena itu ada
+   tipe `'kode'` di `coerce()` (`sheets.js`) yang memakai `f`, dan hanya
+   `kodeBmn` yang memakainya.
+
+   **Jangan dipasang ke kolom yang dipakai mencocokkan baris antar tab**
+   (Kode, Kode/Lot). Tampilan sebuah sel bisa berbeda dari nilainya, sementara
+   rumus di sheet membandingkan nilainya — kunci yang memakai tampilan bisa
+   berhenti cocok dengan yang dihitung sheet. Per 24 Nov 2026 hanya KODE BMN
+   yang terpengaruh: seluruh tab dipindai, dan satu-satunya kolom angka lain
+   yang tampilannya berbeda adalah Suhu Saat Terima (29.3 jadi "29,3"), yang
+   memang bertipe angka dan benar apa adanya.
+
 8. **gviz menempelkan banner ke label kolom pertama** — kolom A Master Stok
    datang sebagai `"INVENTORY STOK REAGEN (Real-time) No"`. `schema.js`
    mencocokkan lewat label dengan `endsWith`, dan jatuh ke posisi kolom kalau
