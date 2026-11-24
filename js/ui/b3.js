@@ -60,6 +60,18 @@ const GAMBAR = {
        + '<path d="M34 46c0-4 7-7 16-7s16 3 16 7v32H34z"/>'
        + '<path d="M50 50l4 9 9-3-6 8 6 8-9-3-4 9-4-9-9 3 6-8-6-8 9 3z" fill="#fff"/>',
   },
+  // Trefoil biohazard. **Bukan GHS** — ia punya standar sendiri, dan bentuk
+  // resminya hitam di atas kuning, bukan belah ketupat merah. Bingkainya
+  // sengaja dibedakan: dua standar yang tampil dengan bingkai sama akan
+  // dikira satu hal yang sama, dan yang membaca label tidak bisa tahu mana
+  // yang bahaya kimia dan mana yang bahaya infeksi.
+  biohazard: {
+    bingkai: '<circle cx="50" cy="50" r="45" fill="#f3c623" stroke="#111" stroke-width="6"/>',
+    isi: '<circle cx="50" cy="52" r="8"/>'
+       + '<circle cx="50" cy="30" r="14" fill="none" stroke="#111" stroke-width="7"/>'
+       + '<circle cx="31" cy="64" r="14" fill="none" stroke="#111" stroke-width="7"/>'
+       + '<circle cx="69" cy="64" r="14" fill="none" stroke="#111" stroke-width="7"/>',
+  },
   lingkungan: {
     isi: '<rect x="14" y="58" width="72" height="5" rx="2"/>'
        + '<path d="M28 58V30" stroke="#111" stroke-width="6" stroke-linecap="round" fill="none"/>'
@@ -83,7 +95,7 @@ export function piktogramB3(kunci, { size = 22, satuan = 'px' } = {}) {
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', NAMA_B3[kunci]);
   svg.innerHTML = `<title>${NAMA_B3[kunci]}</title>`
-    + `<path d="${DIAMOND}" fill="#fff" stroke="#d8252a" stroke-width="7" stroke-linejoin="round"/>`
+    + (g.bingkai || `<path d="${DIAMOND}" fill="#fff" stroke="#d8252a" stroke-width="7" stroke-linejoin="round"/>`)
     + `<g fill="#111">${g.isi}</g>`;
   return svg;
 }

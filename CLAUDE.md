@@ -435,6 +435,48 @@ ikut tercetak — jadi dokumen yang mau ditandatangani baru muncul di halaman
 kedua, di bawah tangkapan dashboard. Tidak kelihatan sama sekali di layar,
 hanya di kertas, dan karena itu bertahan sejak berita acara pemusnahan dibuat.
 
+## Simbol B3
+
+Sepuluh piktogram, digambar sendiri sebagai SVG di `js/ui/b3.js`; yang
+membaca tulisannya ada di `js/data/b3.js` (di lapisan data, karena
+`normalize.js` ikut memakainya dan harus tetap jalan di Node).
+
+**Yang kesepuluh, biohazard, bukan GHS.** Ia punya standar sendiri, dan
+bentuk resminya hitam di atas kuning — bukan belah ketupat merah. Di sini
+bingkainya sengaja dibedakan jadi lingkaran kuning: dua standar yang tampil
+dengan bingkai sama akan dikira satu hal yang sama, dan yang membaca label
+tidak bisa membedakan bahaya kimia dari bahaya infeksi. Trefoil-nya
+disederhanakan (tiga cincin mengelilingi satu titik) supaya masih terbaca di
+6 mm; namanya selalu tampil sebagai teks di sebelahnya, jadi bentuk saja
+tidak pernah jadi satu-satunya penanda.
+
+**Daftar kata kuncinya tumbuh dari tulisan Dinda, bukan dari daftar istilah
+GHS.** Waktu kolomnya mulai diisi (24 Nov 2026, 77 dari 305 reagen),
+9 isian tidak menghasilkan satu simbol pun. Yang paling serius VANCOMYCIN
+"Sensitisasi pernapasan & kulit, Bahaya alergi" — reagen yang betul-betul
+berbahaya, stikernya tercetak polos. Yang ditambahkan sesudah itu:
+
+- biohazard: `bahaya biologis`, `biohazard`, `infeksius`, `patogen`
+- kesehatan: `ototoksik`, `toksisitas organ`, dan sensitisasi **pernapasan**
+- iritan: `berbahaya`, `alergi`, `iritasi`, dan sensitisasi **kulit**
+- korosif: `kerusakan mata` (kerusakan serius pada mata ikut GHS05)
+- terbakar: `reaktif terhadap air`, `gas h2`
+
+Sensitisasi dipisah lewat lookahead karena urutan katanya berubah-ubah di
+sheet — "pernapasan & kulit" dan "kulit & pernapasan" dua-duanya dipakai,
+dan keduanya berarti dua bahaya sekaligus.
+
+**Frasa penyangkalan dibuang dulu, bukan dipakai memulangkan daftar kosong.**
+`tidak berbahaya`, `non-hazardous` dan `tidak diklasifikasikan` dihapus dari
+teksnya sebelum pencocokan, supaya kata "berbahaya" di dalam "tidak
+berbahaya" tidak menyalakan simbol. Memulangkan kosong akan salah, karena
+satu sel bisa menyebut keduanya: "Tidak berbahaya jika tertelan, Iritan"
+tetap harus memunculkan iritan.
+
+Sesudahnya tinggal 8 isian tanpa simbol, dan kedelapannya memang ditulis
+"Non-Hazardous" — nol simbol tapi `sudahDiisi: true`, jadi halaman yang
+menampilkannya bisa membedakan "sudah diperiksa, aman" dari "belum diisi".
+
 ## Notifikasi kedaluwarsa
 
 Dua bagian yang sengaja berbeda sifatnya:
